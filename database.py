@@ -21,10 +21,8 @@ class Database:
                 cls._instance.connection = None
         return cls._instance
 
-    # --- פונקציות העבודה (נשארות אותו דבר, משתמשות ב-self.connection) ---
 
     def get_customer_bookings(self, email):
-        """שליפת כל ההזמנות ללקוח רשום"""
         query = """
             SELECT b.id_booking, b.booking_date, b.status as booking_status, b.total_price,
                    f.id_flight, f.departure_time, r.origin_code, a1.city as origin_city,
@@ -222,8 +220,6 @@ class Database:
         res = cursor.fetchall()
         cursor.close()
         return res
-
-    # --- פונקציות ניהול הזמנות (כאן התיקון ל-self.connection) ---
 
     def get_customer_bookings(self, email):
         """שליפת הזמנות ללקוח רשום בלבד (לפי registered_email)"""
@@ -649,7 +645,7 @@ class Database:
     def get_occupied_seats(self, flight_id):
         """שליפת המושבים התפוסים בלבד"""
         query = """
-                SELECT t.class_type, t.row_number, t.seat_letter
+                SELECT t.class_type, t.`row_number`, t.seat_letter
                 FROM tickets t
                          JOIN bookings b ON b.id_booking = t.id_booking
                 WHERE t.id_flight = %s \
@@ -661,55 +657,6 @@ class Database:
             return cursor.fetchall()
         finally:
             cursor.close()
-
-    # def create_booking_transaction(self, booking_obj, tickets_list):
-    #     """
-    #     שמירת הזמנה + כרטיסים כטרנזקציה אחת (הכל או כלום).
-    #     """
-    #     cursor = self.connection.cursor()
-    #     try:
-    #         # 1. יצירת ההזמנה בטבלת bookings
-    #         q_booking = """
-    #                     INSERT INTO bookings (customers_email, registered_email, booking_date, status, total_price)
-    #                     VALUES (%s, %s, NOW(), 'Confirmed', %s) \
-    #                     """
-    #
-    #         # לוגיקה: אם המשתמש רשום, המייל נכנס גם ל-registered_email. אם אורח - הוא NULL.
-    #         cust_email = booking_obj['email']
-    #         reg_email = booking_obj['registered_email']  # יכול להיות None
-    #
-    #         cursor.execute(q_booking, (cust_email, reg_email, booking_obj['total_price']))
-    #         new_booking_id = cursor.lastrowid
-    #
-    #         # 2. יצירת הכרטיסים בטבלת tickets
-    #         q_ticket = """
-    #                    INSERT INTO tickets (id_booking, id_flight, passenger_name, passenger_passport,
-    #                                         class_type, row_number, seat_letter, price)
-    #                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s) \
-    #                    """
-    #
-    #         for t in tickets_list:
-    #             full_name = f"{t['first_name']} {t['last_name']}"
-    #             cursor.execute(q_ticket, (
-    #                 new_booking_id,
-    #                 t['flight_id'],
-    #                 full_name,
-    #                 t['passport'],
-    #                 t['class_type'],
-    #                 t['row_number'],
-    #                 t['seat_letter'],
-    #                 t['price']
-    #             ))
-    #
-    #         self.connection.commit()
-    #         return True, new_booking_id
-    #
-    #     except Exception as e:
-    #         self.connection.rollback()
-    #         print(f"Transaction Error: {e}")
-    #         return False, str(e)
-    #     finally:
-    #         cursor.close()
 
     def get_full_user_details(self, email):
         """שליפת פרטים למילוי אוטומטי בטופס (עבור משתמש רשום)"""
@@ -864,24 +811,22 @@ class Database:
 
                 for c_type, rows, cols in class_configs:
                     if not rows or not cols: continue
-                    r_int, c_int = int(rows), int(cols)
 
-                    # הוספה לטבלת classes (לפי ה-ERD)
-                    cursor.execute("""
-                        INSERT INTO classes (class_type, num_rows, num_cols, id_plane)
-                        VALUES (%s, %s, %s, %s)
-                    """, (c_type, r_int, c_int, id_p))
+                    cursor.execute(
+                        "INSERT INTO classes (class_type, num_rows, num_cols, id_plane) VALUES (%s, %s, %s, %s)",
+                        (c_type, int(rows), int(cols), id_p))
 
-                    # 3. יצירת מושבים אוטומטית בטבלת seats
-                    # שימוש בגרשיים הפוכים סביב row_number בגלל שמדובר במילה שמורה ב-MySQL
-                    letters = all_letters[:c_int]
-                    for row_num in range(1, r_int + 1):
-                        for letter in letters:
-                            cursor.execute("""
-                                INSERT INTO seats (`row_number`, seat_letter, class_type, id_plane)
-                                VALUES (%s, %s, %s, %s)
-                            """, (row_num, letter, c_type, id_p))
+                    # Fixed: Added backticks around row_number to resolve MySQL reserved word conflict
 
+                    letters = string.ascii_uppercase[:int(cols)]
+
+                    for r in range(1, int(rows) + 1):
+
+                        for l in letters:
+                            cursor.execute(
+                                "INSERT INTO seats (`row_number`, seat_letter, class_type, id_plane) VALUES (%s, %s, %s, %s)",
+                                (r, l, c_type, id_p))
+             
             elif res_type in ['pilot', 'attendant']:
                 # קביעת שם הטבלה בהתאם לסוג המשאב
                 table = "pilots" if res_type == 'pilot' else "flight_attendants"
