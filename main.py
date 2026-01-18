@@ -125,7 +125,7 @@ def view_bookings():
             # אנחנו שולחים רשימה עם פריט אחד ([single_booking]) כי הפונקציה מצפה לרשימה
             conf, comp, c_you, c_sys = Booking.organize_bookings([single_booking])
 
-            return render_template('bookings_results.html',
+            return render_template('booking_results.html',
                                    confirmed=conf, completed=comp,
                                    cancelled_by_you=c_you, cancelled_by_system=c_sys,
                                    is_guest=True, now=now)
