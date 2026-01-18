@@ -551,21 +551,17 @@ def booking_summery_page():
 
     flight_id = booking_data['flight_id']
     seat_strings = booking_data['seats']
-    passengers = booking_data.get('passengers', [])  # <--- שליפת רשימת הנוסעים המוכנה
+    passengers = booking_data.get('passengers', [])
 
-    # 1. שליפת פרטי הטיסה
     raw_flight = db.get_flight_data(flight_id=flight_id)
     if raw_flight:
         flight = prepare_flights_for_view(raw_flight)[0]
     else:
         return redirect("/")
 
-    # 2. חישוב מחירים ושורות לטבלה
     seats_prices = db.get_flight_prices(flight_id)
     summary_rows = []
     total_price = 0.0
-
-
 
     for i, seat_str in enumerate(seat_strings, 1):
         parts = seat_str.split('-')
@@ -594,24 +590,15 @@ def booking_summery_page():
         })
 
     formatted_total = _format_price(total_price)
-
-    # 3. התיקון: רינדור דף הסיכום (booking_payment.html) עם המשתנים שחישבנו למעלה
     return render_template("booking_payment.html",
                            flight=flight,
                            summary_rows=summary_rows,
                            total_price=formatted_total)
 
-
-
-# --- הוספה קריטית: עמוד האישור ---
 @app.route("/booking-confirmation/<int:booking_id>")
 def booking_confirmation_page(booking_id):
-    # שליפת המייל מה-URL כדי להציג אותו למשתמש
     email = request.args.get('email', '')
     return render_template("booking_confirmation.html", booking_id=booking_id, email=email)
-
-
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
