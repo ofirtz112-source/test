@@ -1,20 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Booking Summary</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
+{% extends 'base.html' %}
 
-<div class="container">
-    <div class="top-bar">
-        <div class="welcome">FlyTAU</div>
-    </div>
+{% block title %}Booking Summary - FlyTAU{% endblock %}
 
-    <div class="hero">
+{% block body_class %}inner-page{% endblock %}
+
+{% block content %}
+<div class="container" style="margin-top: 100px;"> <div class="hero">
         <h2 class="hero-title">Review Your Booking</h2>
     </div>
 
@@ -47,9 +38,9 @@
             <tbody>
                 {% for item in summary_rows %}
                 <tr>
-                    <td >{{ item.index }}</td>
-                    <td class="seat-main-info"> {{ item.passenger_name }}</td>
-                    <td class="seat-main-info"> {{ item.passport }}</td>
+                    <td>{{ item.index }}</td>
+                    <td class="seat-main-info">{{ item.passenger_name }}</td>
+                    <td class="seat-main-info">{{ item.passport }}</td>
                     <td class="seat-main-info">{{ item.seat_display }}</td>
                     <td class="text-right price-col">{{ item.price_fmt }}</td>
                 </tr>
@@ -63,15 +54,18 @@
             </tfoot>
         </table>
 
+       <div class="policy-text-alert">
+            <strong style="display: block; margin-bottom: 5px;">Cancellation Policy:</strong>
+            Cancellations permitted <strong>up to 36 hours</strong> prior to departure, subject to a 5% fee.
+       </div>
+
         <div style="margin-top: 30px; text-align: right;">
             <form action="{{ url_for('booking_payment') }}" method="POST">
-                <button type="submit" class="btn" style="background-color: #27ae60; font-size: 1.2rem; padding: 15px 40px;">
+                <button type="submit" class="btn" style="background-color: #27ae60; font-size: 1.2rem; padding: 15px 40px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold;">
                     Pay & Complete Booking
                 </button>
             </form>
         </div>
     </div>
 </div>
-
-</body>
-</html>
+{% endblock %}
