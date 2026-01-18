@@ -512,9 +512,6 @@ def save_passengers():
     return redirect(url_for('booking_summery_page'))
 
 
-
-
-
 @app.route("/booking-payment", methods=["GET","POST"])
 def booking_payment():
 
@@ -544,10 +541,6 @@ def booking_payment():
     else:
         flash("Error processing payment.", "error")
         return redirect(url_for('booking_summery_page'))
-
-
-
-
 
 # תקן את הפונקציה הזו - היא צריכה להציג את הסיכום לפני התשלום
 @app.route("/booking-summery", methods=["GET"])
