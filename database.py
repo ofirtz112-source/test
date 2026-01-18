@@ -842,22 +842,54 @@ class Database:
         # --- הוספות עבור ניהול משאבים (החלק של אופיר) ---
 
     def add_resource(self, res_type, form):
+        import string
         cursor = self.connection.cursor()
         try:
             if res_type == 'aircraft':
+                id_p = form.get('id_plane')
+                size = form.get('size')
+
+                # 1. הכנסה לטבלת planes (לפי ה-ERD)
                 cursor.execute("""
                     INSERT INTO planes (id_plane, manufacturer, size, purchase_date)
-                    VALUES (%s, %s, %s, %s) 
-                """, (form.get('id_plane'), form.get('manufacturer'), form.get('size'), form.get('purchase_date')))
+                    VALUES (%s, %s, %s, %s)
+                """, (id_p, form.get('manufacturer'), size, form.get('purchase_date')))
+
+                # 2. הכנת רשימת מחלקות להוספה (תואם לשדות ב-manage_aircraft.html)
+                class_configs = [('Economy', form.get('eco_rows'), form.get('eco_cols'))]
+                if size == 'Large':
+                    class_configs.append(('Business', form.get('bus_rows'), form.get('bus_cols')))
+
+                all_letters = string.ascii_uppercase
+
+                for c_type, rows, cols in class_configs:
+                    if not rows or not cols: continue
+                    r_int, c_int = int(rows), int(cols)
+
+                    # הוספה לטבלת classes (לפי ה-ERD)
+                    cursor.execute("""
+                        INSERT INTO classes (class_type, num_rows, num_cols, id_plane)
+                        VALUES (%s, %s, %s, %s)
+                    """, (c_type, r_int, c_int, id_p))
+
+                    # 3. יצירת מושבים אוטומטית בטבלת seats
+                    # שימוש בגרשיים הפוכים סביב row_number בגלל שמדובר במילה שמורה ב-MySQL
+                    letters = all_letters[:c_int]
+                    for row_num in range(1, r_int + 1):
+                        for letter in letters:
+                            cursor.execute("""
+                                INSERT INTO seats (`row_number`, seat_letter, class_type, id_plane)
+                                VALUES (%s, %s, %s, %s)
+                            """, (row_num, letter, c_type, id_p))
 
             elif res_type in ['pilot', 'attendant']:
-                # קביעת שם הטבלה
+                # קביעת שם הטבלה בהתאם לסוג המשאב
                 table = "pilots" if res_type == 'pilot' else "flight_attendants"
 
-                # קליטת הצ'קבוקס (קיים עכשיו גם לדיילים)
+                # קליטת ה-Checkbox עבור הסמכה לטיסות ארוכות
                 long_haul = 1 if form.get('long_flights') else 0
 
-                # שאילתה אחת שטובה לשניהם
+                # הכנסת נתוני עובד (תואם לשדות ב-manage_aircraft.html ול-ERD)
                 cursor.execute(f"""
                     INSERT INTO {table} 
                     (id_worker, first_name, last_name, phone_number, start_date, city, street, house_number, long_flights)
@@ -866,12 +898,12 @@ class Database:
                     form.get('id_worker'),
                     form.get('first_name'),
                     form.get('last_name'),
-                    form.get('phone'),  # ב-HTML השדה נקרא phone
+                    form.get('phone'), # השם ב-HTML
                     form.get('start_date'),
                     form.get('city'),
                     form.get('street'),
                     form.get('house_number'),
-                    long_haul  # נכנס עכשיו גם לדיילים
+                    long_haul
                 ))
 
             self.connection.commit()
@@ -950,6 +982,3 @@ class Database:
             return res
         finally:
             cursor.close()
-
-
-
