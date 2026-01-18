@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}My Bookings - FlyTau{% endblock %}
+
+{% block body_class %}bookings-page-body{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="header-section">
+        {% if is_guest %}
+            <h1>Booking Details</h1>
+            <p>Viewing details for booking #{{ (confirmed + completed + cancelled_by_you + cancelled_by_system)[0].info.id_booking if (confirmed or completed or cancelled_by_you or cancelled_by_system) else '' }}</p>
+        {% else %}
+            <h1>My Bookings</h1>
+            <p>Manage your upcoming and past flights</p>
+        {% endif %}
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;
+                      background-color: {{ '#f0fff4' if category == 'success' else '#fff5f5' }};
+                      color: {{ '#2f855a' if category == 'success' else '#c53030' }};
+                      border: 1px solid {{ '#9ae6b4' if category == 'success' else '#fc8181' }};">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% if not is_guest %}
+    <div class="filter-section">
+        <label class="filter-label">Filter by Status:</label>
+        <select id="status-filter" class="status-select" onchange="filterBookings()">
+            <option value="all">Show All</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled_Client">Cancelled (By You)</option>
+            <option value="Cancelled_System">Cancelled (By System)</option>
+        </select>
+    </div>
+    {% endif %}
+
+    <div id="bookings-list">
+        {% if not confirmed and not completed and not cancelled_by_you and not cancelled_by_system %}
+            <p style="text-align: center; color: #718096; margin-top: 30px;">No bookings found.</p>
+        {% else %}
+
+        {% for category, bookings in [
+            ('Confirmed', confirmed),
+            ('Completed', completed),
+            ('Cancelled_Client', cancelled_by_you),
+            ('Cancelled_System', cancelled_by_system)
+        ] %}
+            {% for booking in bookings %}
+            <div class="flight-card booking-item" data-status="{{ category }}">
+                <div style="margin-bottom: 15px;">
+                    <h3 style="margin: 0; color: #2d3748;">✈ {{ booking.info.origin }} ➝ {{ booking.info.destination }}</h3>
+
+                    <span class="status-badge
+                        {{ 'status-confirmed' if category == 'Confirmed' }}
+                        {{ 'status-completed' if category == 'Completed' }}
+                        {{ 'status-cancelled' if category.startswith('Cancelled') }}">
+                        {% if category == 'Confirmed' %} Confirmed
+                        {% elif category == 'Completed' %} Completed
+                        {% elif category == 'Cancelled_Client' %} Cancelled (By You)
+                        {% elif category == 'Cancelled_System' %} Cancelled (By System)
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="flight-details-row">
+                    <div><strong>Date:</strong> {{ booking.info.departure_time.strftime('%d %b %Y') }}</div>
+                    <div><strong>Time:</strong> {{ booking.info.departure_time.strftime('%H:%M') }}</div>
+                    <div><strong>Booking ID:</strong> #{{ booking.info.id_booking }}</div>
+                    <div class="total-price-text">Total Price: ${{ "{:,.2f}".format(booking.info.total_price) }}</div>
+                </div>
+
+                <div class="ticket-info">
+                    <div style="font-weight: 600; margin-bottom: 10px; color: #4a5568;">Passenger Details:</div>
+                    {% for ticket in booking.tickets %}
+                    <div class="passenger-row">
+                        <span>👤 {{ ticket.name }}</span>
+                        <span>💺 Seat: {{ ticket.seat }} ({{ ticket.class }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if category == 'Confirmed' %}
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button type="button" class="btn-cancel-flight"
+                                onclick="initiateCancel('{{ booking.info.id_booking }}', '{{ booking.info.departure_time.isoformat() }}', {{ booking.info.total_price|float }})">
+                            Cancel Booking
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="form-footer">
+        <a href="/" class="back-home-link">← Back to Homepage</a>
+    </div>
+</div>
+
+<div id="modal-too-late" class="modal-overlay">
+    <div class="modal-box">
+        <h3 style="color: #c53030;">Cancellation Unavailable</h3>
+        <p>Flights cannot be cancelled less than 36 hours before departure.</p>
+        <div class="modal-actions">
+            <button class="btn-keep" onclick="closeModals()">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-confirm-fee" class="modal-overlay">
+    <div class="modal-box">
+        <h3 style="color: #2d3748;">Confirm Cancellation</h3>
+        <p>A 5% cancellation fee (<span id="fee-amount" style="font-weight: bold; color: #c53030;"></span>) will be deducted.</p>
+        <p>Refund amount: <span id="refund-amount" style="font-weight: bold; color: #2c7a7b;"></span></p>
+
+        <form action="{{ url_for('cancel_booking') }}" method="POST">
+            <input type="hidden" name="id_booking" id="form-booking-id">
+            <div class="modal-actions">
+                <button type="button" class="btn-keep" onclick="closeModals()">Keep Flight</button>
+                <button type="submit" class="btn-confirm">Yes, Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterBookings() {
+        const selectedValue = document.getElementById('status-filter').value;
+        const items = document.querySelectorAll('.booking-item');
+        items.forEach(item => {
+            const itemStatus = item.getAttribute('data-status');
+            item.style.display = (selectedValue === 'all' || itemStatus === selectedValue) ? 'block' : 'none';
+        });
+    }
+
+    function initiateCancel(bookingId, flightTimeIso, totalPrice) {
+        const flightDate = new Date(flightTimeIso);
+        const now = new Date();
+        const diffInHours = (flightDate - now) / (1000 * 60 * 60);
+
+        if (diffInHours < 36) {
+            document.getElementById('modal-too-late').style.display = 'flex';
+        } else {
+            const fee = totalPrice * 0.05;
+            const refund = totalPrice - fee;
+
+            document.getElementById('fee-amount').innerText = '$' + fee.toFixed(2);
+            document.getElementById('refund-amount').innerText = '$' + refund.toFixed(2);
+            document.getElementById('form-booking-id').value = bookingId;
+
+            document.getElementById('modal-confirm-fee').style.display = 'flex';
+        }
+    }
+
+    function closeModals() {
+        document.getElementById('modal-too-late').style.display = 'none';
+        document.getElementById('modal-confirm-fee').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal-overlay')) closeModals();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // שים לב לשימוש ב-safe בתוך הסקריפט כדי למנוע בעיות רינדור
+        const isGuest = {{ 'true' if is_guest else 'false' }};
+        if (isGuest) {
+            document.querySelectorAll('.booking-item').forEach(item => item.style.display = 'block');
+        } else {
+            filterBookings();
+        }
+    });
+</script>
+{% endblock %}

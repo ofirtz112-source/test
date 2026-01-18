@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}FlyTAU - Find My Booking{% endblock %}
+
+{% block body_class %}login-page-body{% endblock %}
+
+{% block content %}
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="form-logo">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="FlyTAU Logo">
+            </div>
+            <h1 class="form-title">Find Your Booking</h1>
+            <p class="form-subtitle">Please enter your details to view your flights</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert-box {{ 'alert-success' if category == 'success' else 'alert-error' }}">
+                    <span>{{ '✅' if category == 'success' else '⚠️' }}</span>
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="/my-bookings" class="styled-form">
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" name="email" placeholder="Enter your email" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Booking ID</label>
+                    <input type="text" name="id_booking" placeholder="e.g. 5001">
+                </div>
+
+                <button type="submit" class="btn-full">Search Bookings</button>
+            </form>
+
+            <div class="form-footer">
+                <a href="/" class="back-home-link">← Back to Homepage</a>
+            </div>
+        </div>
+    </div>
+{% endblock %}

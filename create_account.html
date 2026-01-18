@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}FlyTAU - Join Us{% endblock %}
+
+{% block body_class %}login-page-body{% endblock %}
+
+{% block content %}
+  <div class="login-wrapper">
+    <div class="login-card register-card">
+
+        <div class="form-logo">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="FlyTAU Logo">
+        </div>
+
+        <h2 class="form-title">Create Account</h2>
+        <p class="form-subtitle">Join us and start your journey.</p>
+
+        <form method="post" action="{{ url_for('create_account_page') }}" class="styled-form">
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>First Name</label>
+                    <input type="text" name="first_name" required value="{{ first_name or '' }}" pattern="[a-zA-Z\s]+"
+                           title="Please enter English letters only" placeholder="John">
+                </div>
+                <div class="input-group">
+                    <label>Last Name</label>
+                    <input type="text" name="last_name" required value="{{ last_name or '' }}" pattern="[a-zA-Z\s]+"
+                           title="Please enter English letters only" placeholder="Doe">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" name="email" required value="{{ email or '' }}" placeholder="john@example.com">
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Date of Birth</label>
+                    <input type="text" id="birth-date" name="date_of_birth" required value="{{ date_of_birth or '' }}" placeholder="Select Date">
+                </div>
+                <div class="input-group">
+                    <label>Passport Number</label>
+                    <input type="text" name="passport_number" required value="{{ passport_number or '' }}"
+                           pattern="[A-Z0-9]{6,9}" title="Passport must be 6-9 alphanumeric characters" placeholder="A12345678">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Password</label>
+                <div class="password-wrapper">
+                    <input type="password" name="password" required placeholder="Choose a strong password">
+                    <button type="button" class="toggle-password-btn" onclick="togglePassword(this)">👁️</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Phone Numbers</label>
+                <div id="phones">
+                  <input type="text" name="phone_numbers" required placeholder="Phone number" class="phone-input"
+                         pattern="[0-9]{9,15}" title="Digits only, 9-15 characters" >
+                </div>
+                <button type="button" class="add-phone-link" onclick="addPhone()">+ Add another phone</button>
+            </div>
+
+            {% if error %}
+                <div class="error-message">{{ error }}</div>
+            {% endif %}
+
+            <button type="submit" class="btn-full">Create Account</button>
+
+        </form>
+
+        <div class="form-footer">
+            Already have an account?
+            <a href="{{ url_for('register_login_page') }}" class="create-account-link">Sign In</a>
+
+            <div style="margin-top: 15px;">
+                <a href="/" class="back-home-link">← Back to Homepage</a>
+            </div>
+        </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // הגדרת לוח שנה
+    flatpickr("#birth-date", {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "F j, Y",
+        maxDate: "today",
+        disableMobile: "true",
+        theme: "airbnb"
+    });
+
+    // הוספת טלפונים
+    function addPhone() {
+        const container = document.getElementById("phones");
+        const input = document.createElement("input");
+        input.type = "text";
+        input.name = "phone_numbers";
+        input.placeholder = "Another phone number";
+        input.className = "phone-input";
+        input.style.marginTop = "10px";
+        input.required = true;
+        container.appendChild(input);
+        input.pattern = "[0-9]{9,15}";
+        input.title = "Digits only, 9-15 characters";
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}Passenger Details - FlyTAU{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="tickets-layout">
+
+        <aside class="summary-top-bar">
+            <div class="summary-header">
+                <div>
+                    <h2>Flight Summary</h2>
+                    <div style="margin-top: 5px; color: #4a5568;">
+                        <strong>{{ flight.origin }} ✈︎ {{ flight.destination }}</strong>
+                    </div>
+                </div>
+                <div class="flight-time">
+                    Departure: {{ flight.departure_display }}
+                </div>
+            </div>
+
+            <table class="seats-table">
+                <thead>
+                    <tr>
+                        <th>Seat</th>
+                        <th>Class</th>
+                        <th>Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in seats_list %}
+                    <tr>
+                        <td class="seat-code"><strong>{{ s.seat_code }}</strong></td>
+                        <td>{{ s.class }}</td>
+                        <td>{{ s.price }}</td> </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="total-row">
+                <span>Total Payment</span>
+                <span>${{ total_price }}</span>
+            </div>
+        </aside>
+
+        <main class="form-section">
+            <form action="{{ url_for('save_passengers') }}" method="POST">
+
+                {% for i in range(1, num_forms + 1) %}
+
+                <div class="passenger-card">
+                    <h3>
+                        {% if i == 1 %}
+                            Primary Passenger
+                            <span class="badge" style="background: #ebf8ff; color: #3182ce; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem;">Contact Person</span>
+                        {% else %}
+                            Passenger {{ i }}
+                            <span class="badge" style="background: #edf2f7; color: #4a5568; padding: 5px 10px; border-radius: 15px; font-size: 0.8rem;">
+                                Seat: {{ seats_list[i-1]['seat_code'] }}
+                            </span>
+                        {% endif %}
+                    </h3>
+
+                    {% set is_main_user = (i == 1 and user) %}
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>First Name</label>
+                            <input type="text"
+                                   name="first_name_{{i}}"
+                                   value="{% if is_main_user %}{{ user.first_name }}{% endif %}"
+                                   required
+                                   pattern="[a-zA-Z\s]+"
+                                   title="Please enter English letters only (A-Z)"
+                                   class="{% if is_main_user %}readonly-field{% endif %}"
+                                   {% if is_main_user %}readonly{% endif %}>
+                        </div>
+                        <div class="form-group">
+                            <label>Last Name</label>
+                            <input type="text"
+                                   name="last_name_{{i}}"
+                                   value="{% if is_main_user %}{{ user.last_name }}{% endif %}"
+                                   required
+                                   pattern="[a-zA-Z\s]+"
+                                   title="Please enter English letters only (A-Z)"
+                                   class="{% if is_main_user %}readonly-field{% endif %}"
+                                   {% if is_main_user %}readonly{% endif %}>
+                        </div>
+                    </div>
+
+                    <div class="form-group passport-group">
+                        <label>Passport Number</label>
+                        <input type="text"
+                               name="passport_{{i}}"
+                               value="{% if is_main_user %}{{ user.passport }}{% endif %}"
+                               required
+                               pattern="[a-zA-Z0-9]{6,9}"
+                               title="Passport must be 6-9 alphanumeric characters"
+                               class="{% if is_main_user %}readonly-field{% endif %}"
+                               {% if is_main_user %}readonly{% endif %}>
+                    </div>
+
+                    {% if i == 1 %}
+                        <div class="contact-section" style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                            <span class="contact-title" style="color: #2b6cb0; font-weight: bold; margin-bottom: 15px; display: block;">Contact & Personal Details</span>
+
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email"
+                                       name="email_1"
+                                       value="{% if is_main_user %}{{ user.email }}{% endif %}"
+                                       required
+                                       class="{% if is_main_user %}readonly-field{% endif %}"
+                                       {% if is_main_user %}readonly{% endif %}>
+                            </div>
+
+                            <div class="form-group phone-group" style="margin-top: 15px;">
+                                <label>Phone Numbers</label>
+
+                                <div id="phone-container">
+                                    {% if is_main_user and user.phone_numbers %}
+                                        {% for phone in user.phone_numbers %}
+                                        <input type="tel"
+                                               name="phone_numbers"
+                                               value="{{ phone }}"
+                                               class="phone-input readonly-field"
+                                               readonly
+                                               pattern="[0-9]{9,15}"
+                                               title="Digits only, 9-15 characters"
+                                               style="margin-bottom: 8px;">
+                                        {% endfor %}
+                                        <small class="registered-note">* Registered details cannot be changed.</small>
+
+                                    {% else %}
+                                        <input type="tel"
+                                               name="phone_numbers"
+                                               class="phone-input"
+                                               required
+                                               pattern="[0-9]{9,15}"
+                                               title="Digits only, 9-15 characters"
+                                               style="margin-bottom: 8px;">
+
+                                        <button type="button" onclick="addPhoneField()" class="add-phone-link" style="background:none; border:none; color:#3182ce; cursor:pointer; padding:0; font-weight:600;">
+                                            + Add Another Phone
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                {% if total_seats > 2 %}
+                <div class="alert alert-info" style="margin-top: 20px;">
+                    <strong>Note:</strong> You have selected {{ total_seats }} seats.
+                    Details for passengers 3-{{ total_seats }} will be automatically generated.
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn-full" style="margin-top: 30px;">Proceed to Payment</button>
+
+            </form>
+        </main>
+    </div>
+</div>
+
+<script>
+    function addPhoneField() {
+        const container = document.getElementById('phone-container');
+        const btn = container.querySelector('button'); // מציאת כפתור ההוספה
+        if (!btn) return; // הגנה למקרה שהכפתור לא קיים (משתמש רשום)
+
+        const input = document.createElement('input');
+        input.type = 'tel';
+        input.name = 'phone_numbers';
+        input.className = 'phone-input'; // משתמש באותו קלאס כמו האינפוט הראשי
+        input.style.marginBottom = '8px';
+        input.style.display = 'block';
+        input.placeholder = "Another Phone Number";
+        input.pattern = "[0-9]{9,15}";
+        input.title = "Digits only, 9-15 characters";
+
+        container.insertBefore(input, btn);
+    }
+</script>
+{% endblock %}
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--  <meta charset="UTF-8">-->
+<!--  <title>Select Seats</title>-->
+<!--  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">-->
+<!--  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&display=swap" rel="stylesheet">-->
+<!--  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">-->
+<!--</head>-->
+<!--<div class="container">-->
+
+<!--    <div class="hero">-->
+<!--        <h2 class="hero-title">Review Your Booking</h2>-->
+<!--    </div>-->
+
+<!--    <aside class="summary-sidebar">-->
+<!--        <div class="summary-header">-->
+<!--            <h2>Flight Summary</h2>-->
+<!--            <div class="flight-route">-->
+<!--                {{ flight.origin }} ✈︎ {{ flight.destination }}-->
+<!--            </div>-->
+<!--            <div class="flight-time">-->
+<!--                {{ flight.departure_time }}-->
+<!--            </div>-->
+<!--        </div>-->
+
+<!--        <table class="seats-table">-->
+<!--            <thead>-->
+<!--                <tr>-->
+<!--                    <th>Seat</th>-->
+<!--                    <th>Class</th>-->
+<!--                    <th>Price</th>-->
+<!--                </tr>-->
+<!--            </thead>-->
+<!--            <tbody>-->
+<!--                {% for s in seats_list %}-->
+<!--                <tr>-->
+<!--                    <td class="seat-code">{{ s.seat_code }}</td>-->
+<!--                    <td>{{ s.class }}</td>-->
+<!--                    <td>${{ s.price }}</td>-->
+<!--                </tr>-->
+<!--                {% endfor %}-->
+<!--            </tbody>-->
+<!--        </table>-->
+
+<!--        <div class="total-row">-->
+<!--            <span>Total</span>-->
+<!--            <span>${{ total_price }}</span>-->
+<!--        </div>-->
+<!--    </aside>-->
+
+<!--    <main class="form-section">-->
+<!--        <form action="{{ url_for('save_passengers') }}" method="POST">-->
+
+<!--            {% for i in range(1, num_forms + 1) %}-->
+
+<!--            <div class="passenger-card">-->
+<!--                <h3>-->
+<!--                    {% if i == 1 %}-->
+<!--                        Primary Passenger-->
+<!--                        <span class="badge">Contact Person</span>-->
+<!--                    {% else %}-->
+<!--                        Passenger {{ i }}-->
+<!--                    {% endif %}-->
+<!--                </h3>-->
+
+<!--                {% set u = user if (i == 1 and user) else {} %}-->
+
+<!--                <div class="form-row">-->
+<!--                    <div class="form-group">-->
+<!--                        <label>First Name</label>-->
+<!--                        <input type="text" name="first_name_{{i}}"-->
+<!--                               value="{{ u.first_name if u.first_name else '' }}" required>-->
+<!--                    </div>-->
+<!--                    <div class="form-group">-->
+<!--                        <label>Last Name</label>-->
+<!--                        <input type="text" name="last_name_{{i}}"-->
+<!--                               value="{{ u.last_name if u.last_name else '' }}" required>-->
+<!--                    </div>-->
+<!--                </div>-->
+
+<!--                <div class="form-group passport-group">-->
+<!--                    <label>Passport Number</label>-->
+<!--                    <input type="text" name="passport_{{i}}"-->
+<!--                           value="{{ u.passport if u.passport else '' }}" required>-->
+<!--                </div>-->
+
+<!--                {% if i == 1 %}-->
+<!--                    <div class="contact-section">-->
+<!--                        <span class="contact-title">Contact & Personal Details</span>-->
+
+<!--                        <div class="form-group">-->
+<!--                            <label>Email Address</label>-->
+<!--                            <input type="email" name="email_1"-->
+<!--                                   value="{{ u.email if u.email else '' }}" required>-->
+<!--                        </div>-->
+
+<!--                        <div class="form-group phone-group">-->
+<!--                            <label>Phone Numbers</label>-->
+
+<!--                            <div id="phone-container">-->
+<!--                                {% if u.phone_numbers and u.phone_numbers|length > 0 %}-->
+<!--                                    {% for phone in u.phone_numbers %}-->
+<!--                                    <input type="tel"-->
+<!--                                           name="phone_numbers"-->
+<!--                                           placeholder="Phone Number"-->
+<!--                                           class="phone-input"-->
+<!--                                           required-->
+<!--                                           maxlength="10"-->
+<!--                                           oninput="this.value = this.value.replace(/[^0-9]/g, '')"-->
+<!--                                           style="margin-bottom: 5px;">-->
+<!--                                    {% endfor %}-->
+<!--                                    <small class="info-note">-->
+<!--                                        * Saved contact numbers for registered user.-->
+<!--                                    </small>-->
+<!--                                {% else %}-->
+<!--                                    <input type="text"-->
+<!--                                           name="phone_numbers"-->
+<!--                                           class="phone-input"-->
+<!--                                           required-->
+<!--                                           style="margin-bottom: 5px;">-->
+
+<!--                                    <button type="button" onclick="addPhoneField()" class="add-phone-btn" style="margin-top: 5px;">-->
+<!--                                        + Add Another Phone-->
+<!--                                    </button>-->
+<!--                                {% endif %}-->
+<!--                            </div>-->
+<!--                        </div>-->
+<!--                    </div>-->
+<!--                {% endif %}-->
+<!--            </div>-->
+<!--            {% endfor %}-->
+<!--            {% if total_seats > 2 %}-->
+<!--            <div class="auto-note">-->
+<!--                <strong>Note:</strong> You have selected {{ total_seats }} seats.-->
+<!--                Details for passengers 3-{{ total_seats }} will be automatically generated based on the Primary Passenger's information.-->
+<!--            </div>-->
+<!--            {% endif %}-->
+
+<!--            <button type="submit" class="submit-btn">Proceed to Payment</button>-->
+
+<!--        </form>-->
+<!--    </main>-->
+<!--</div>-->
+
+
+<!--<script>-->
+<!--    function addPhoneField() {-->
+<!--        const container = document.getElementById('phone-container');-->
+<!--        const btn = container.querySelector('.add-phone-btn');-->
+
+<!--        const input = document.createElement('input');-->
+<!--        input.type = 'text';-->
+<!--        input.name = 'phone_numbers';-->
+<!--        input.className = 'phone-input';-->
+<!--        input.style.marginBottom = '5px';-->
+<!--        input.style.display = 'block';-->
+<!--        input.maxLength = 10;-->
+<!--        input.oninput = function() {this.value = this.value.replace(/[^0-9]/g, '');};-->
+
+<!--        container.insertBefore(input, btn);}-->
+
+
+<!--</script>-->
+
+<!--</body>-->
+<!--</html>-->

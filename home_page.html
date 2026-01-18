@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}FlyTAU - Home{% endblock %}
+
+{% block extra_head %}
+    {# Flatpickr CSS נטען ב-base.html #}
+{% endblock %}
+
+{% block content %}
+  <div id="dest-modal" class="modal">
+      <div class="modal-content">
+          <span class="close-btn" onclick="closeModal()">&times;</span>
+          <h2 id="modal-title"></h2>
+          <p id="modal-text"></p>
+          <div class="fun-fact">
+              <strong>Fun Fact:</strong> <span id="modal-fact"></span>
+          </div>
+          <br>
+          <button class="btn" onclick="closeModal()" style="width: 100%;">Close</button>
+      </div>
+  </div>
+
+  <div class="full-width-hero">
+      <div class="top-bar-transparent">
+          <div class="left-nav">
+              <div class="logo-container">
+                  <img src="{{ url_for('static', filename='images/logo.png') }}" alt="FlyTAU Logo">
+              </div>
+              <div class="welcome-text">Hi, {{ session.get('first_name', 'Traveler') }}</div>
+          </div>
+          <div class="nav-links">
+            {% if 'email' not in session %}
+              <a href="{{ url_for('view_bookings') }}">Manage Booking</a>
+              <a href="{{ url_for('register_login_page') }}">My Account</a>
+              <a href="{{ url_for('create_account_page') }}">Join FlyTAU</a>
+            {% else %}
+              <a href="{{ url_for('view_bookings') }}">My Bookings</a>
+              <a href="/logout">Logout</a>
+            {% endif %}
+            <a href="{{ url_for('manager_login_page') }}">Management</a>
+          </div>
+      </div>
+      <div class="hero-content">
+          <h1 class="hero-main-title">FLYTAU</h1>
+          <p class="hero-sub-title">Your Journey Starts Here.</p>
+      </div>
+  </div>
+
+  <div class="main-content-wrapper">
+    <form method="GET" action="/" class="search-form-wide" onsubmit="return validateForm()">
+      <div class="trip-type-toggle">
+          <label class="radio-label">
+              <input type="radio" name="trip_type" value="round" onchange="toggleTripType()" {% if trip_type =='round' or not trip_type %}checked{% endif %}>
+              <span class="radio-custom"></span> Round Trip
+          </label>
+          <label class="radio-label">
+              <input type="radio" name="trip_type" value="oneway" onchange="toggleTripType()" {% if trip_type =='oneway' %}checked{% endif %}>
+              <span class="radio-custom"></span> One Way
+          </label>
+      </div>
+
+      <div class="search-field date-wrapper">
+        <label>Departure</label>
+        <div class="custom-date-btn">
+            <span id="dept-label">Select Date</span>
+            <input type="text" name="date" class="flatpickr-input hidden-date" value="{{ date or '' }}" required>
+        </div>
+      </div>
+
+      <div class="search-field date-wrapper" id="return-date-div">
+        <label>Return</label>
+        <div class="custom-date-btn">
+            <span id="return-label">Select Date</span>
+            <input type="text" name="return_date" class="flatpickr-input hidden-date" value="{{ return_date or '' }}">
+        </div>
+      </div>
+
+      <div class="search-field">
+        <label>From</label>
+        <input type="text" id="origin" name="origin" placeholder="Where from?" list="destinations_list" value="{{ origin or '' }}" oninput="checkLocation(this)" required>
+        <div class="field-error" id="error-origin"></div>
+      </div>
+
+      <div class="search-field">
+        <label>To</label>
+        <input type="text" id="destination" name="destination" placeholder="Where to?" list="destinations_list" value="{{ destination or '' }}" oninput="checkLocation(this)" required>
+        <div class="field-error" id="error-destination"></div>
+      </div>
+
+      <datalist id="destinations_list">
+        {% for dest in destinations %}<option value="{{ dest.city }}">{{ dest.country }} - {{ dest.airport_name }}</option>{% endfor %}
+      </datalist>
+      <button type="submit" class="btn-search">Search Flights</button>
+    </form>
+
+    <section class="destinations-section">
+        <h2 class="section-title">Explore Our Top Cities</h2>
+        <div class="destinations-grid">
+            {% set city_list = [
+                ('Tel Aviv', 'telaviv.png'), ('Amsterdam', 'amsterdam.png'), ('Berlin', 'berlin.png'),
+                ('Cairo', 'cairo.png'), ('Athens', 'athens.png'), ('Tokyo', 'tokyo.png'),
+                ('New York', 'newyork.png'), ('London', 'london.png'), ('Paris', 'paris.png'), ('Rome', 'rome.png')
+            ] %}
+            {% for city, img_name in city_list %}
+            <div class="dest-item" onclick="openDestinationInfo('{{ city }}')">
+                <div class="icon-circle">
+                    <img src="{{ url_for('static', filename='images/' + img_name) }}" alt="{{ city }}">
+                </div>
+                <span>{{ city }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if search_performed %}
+      <div class="results-container">
+        {% if outbound_flights|length == 0 %}
+            <div class="no-flights-alert">
+                <h3>⚠️ No flights found for {{ date }}</h3>
+                <p>We couldn't find any flights from {{ origin }} to {{ destination }} on this specific date.</p>
+                {% if suggested_dates and suggested_dates.outbound %}
+                    <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <p style="color: #2d3748; font-weight: 600;">Good news! We found a flight nearby on:</p>
+                        <p style="font-size: 1.2rem; color: #1a2a6c; font-weight: bold;">{{ suggested_dates.outbound }}</p>
+                        <a href="/?origin={{origin}}&destination={{destination}}&date={{suggested_dates.outbound}}&trip_type={{trip_type}}&return_date={{return_date or ''}}"
+                           class="btn-switch-oneway" style="display: inline-block; text-decoration: none;">Check this date</a>
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <h2 class="flight-section-title">🛫 Outbound: {{ origin }} ➝ {{ destination }}</h2>
+            <table class="flights-table">
+            {% for flight in outbound_flights %}
+              <tr class="flight-row">
+                <td class="col-time"><div class="dt">{{ flight["departure_display"] }}</div><div class="sub">{{ flight["origin"] }}</div></td>
+                <td class="arrow">✈</td>
+                <td class="col-time"><div class="dt">{{ flight["arrival_display"] }}</div><div class="sub">{{ flight["destination"] }}</div></td>
+                <td class="col-price">{{ flight["price_display"] }}</td>
+                <td><a class="btn" href="{{ url_for('select_seats_page', flight_id=flight.id_flight) }}">Select</a></td>              </tr>
+            {% endfor %}
+            </table>
+            {% if trip_type == 'round' %}
+                {% if return_flights|length == 0 %}
+                    <div class="no-flights-alert alert-warning" style="margin-top: 50px;">
+                        <h3>⚠️ No return flights found for {{ return_date }}</h3>
+                        {% if suggested_dates and suggested_dates.return %}
+                            <p>We found outbound flights, but the return date is unavailable.</p>
+                            <p>However, we found a return flight on: <strong>{{ suggested_dates.return }}</strong></p>
+                            <a href="/?origin={{origin}}&destination={{destination}}&date={{date}}&trip_type=round&return_date={{suggested_dates.return}}"
+                               class="btn-switch-oneway" style="display: inline-block; text-decoration: none; background-color: #744210;">Check suggested return date</a>
+                            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #ecc94b;">
+                        {% endif %}
+                        <p>Alternatively, you can book just the outbound flight in <strong>One Way</strong> mode:</p>
+                        <form action="/" method="GET">
+                            <input type="hidden" name="origin" value="{{ origin }}">
+                            <input type="hidden" name="destination" value="{{ destination }}">
+                            <input type="hidden" name="date" value="{{ date }}">
+                            <input type="hidden" name="trip_type" value="oneway">
+                            <button type="submit" class="btn-switch-oneway">Switch to One Way & Book</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <h2 class="flight-section-title" style="margin-top: 50px;">🛬 Return: {{ destination }} ➝ {{ origin }}</h2>
+                    <table class="flights-table">
+                    {% for flight in return_flights %}
+                      <tr class="flight-row">
+                        <td class="col-time"><div class="dt">{{ flight["departure_display"] }}</div><div class="sub">{{ flight["origin"] }}</div></td>
+                        <td class="arrow">✈</td>
+                        <td class="col-time"><div class="dt">{{ flight["arrival_display"] }}</div><div class="sub">{{ flight["destination"] }}</div></td>
+                        <td class="col-price">{{ flight["price_display"] }}</td>
+
+                          <td><a class="btn" href="{{ url_for('select_seats_page', flight_id=flight.id_flight) }}">Select</a></td>
+
+                      </tr>
+                    {% endfor %}
+                    </table>
+                {% endif %}
+            {% endif %}
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const destinationInfo = {
+        "Tel Aviv": { text: "Tel Aviv is a vibrant city in Israel, known for its stunning Mediterranean beaches, world-class nightlife, and the historic Jaffa port.", fact: "Tel Aviv has the highest number of vegans per capita in the world!" },
+        "Amsterdam": { text: "Amsterdam, the capital of the Netherlands, is famous for its artistic heritage, elaborate canal system, and narrow houses with gabled facades.", fact: "There are 165 canals in Amsterdam - more than in Venice!" },
+        "Berlin": { text: "Berlin, Germany's capital, is a major center of culture, politics, and history, featuring iconic landmarks like the Brandenburg Gate.", fact: "Berlin is nine times bigger than Paris in physical size!" },
+        "Cairo": { text: "Cairo is the sprawling capital of Egypt, located on the Nile River and home to the world-famous Giza Pyramid complex.", fact: "Cairo is the largest city in Africa and the Middle East!" },
+        "Athens": { text: "Athens, the capital of Greece, was the heart of Ancient Greece and is dominated by 5th-century BC landmarks like the Acropolis.", fact: "Athens is one of the world's oldest cities, with recorded history spanning over 3,400 years!" },
+        "Tokyo": { text: "Tokyo is Japan's busy capital, mixing ultramodern skyscrapers with historic temples and beautiful cherry blossom parks.", fact: "The Tokyo metropolitan area is the most populous in the world with over 37 million residents!" },
+        "New York": { text: "New York City, located in the USA, is a global hub of finance, culture, and fashion, featuring the Statue of Liberty and Central Park.", fact: "Honking your car horn is actually illegal in NYC, except for emergencies!" },
+        "London": { text: "London, the capital of the UK, is a 21st-century city with history stretching back to Roman times, home to Big Ben and the London Eye.", fact: "London has over 170 museums and 3,000 parks!" },
+        "Paris": { text: "Paris, France's capital, is a global center for art, fashion, and culture, renowned for the Eiffel Tower and the Louvre museum.", fact: "The main bell in Notre Dame Cathedral is named Emmanuel and weighs over 13 tons!" },
+        "Rome": { text: "Rome, the capital of Italy, is a massive cosmopolitan city with nearly 3,000 years of globally influential art, architecture, and ruins.", fact: "Rome was the first city in the world to reach a population of one million people!" }
+    };
+
+    function openDestinationInfo(city) {
+        const info = destinationInfo[city];
+        document.getElementById('modal-title').innerText = city;
+        document.getElementById('modal-text').innerText = info.text;
+        document.getElementById('modal-fact').innerText = info.fact;
+        document.getElementById('dest-modal').style.display = "block";
+    }
+
+    function closeModal() {
+        document.getElementById('dest-modal').style.display = "none";
+    }
+
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('dest-modal')) closeModal();
+    }
+
+    function toggleTripType() {
+        const isOneWay = document.querySelector('input[name="trip_type"]:checked').value === 'oneway';
+        document.getElementById('return-date-div').style.display = isOneWay ? 'none' : '';
+    }
+
+    function updateLabel(dateStr, labelId) {
+        if(!dateStr || dateStr === 'None') return;
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return;
+        document.getElementById(labelId).innerText = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Flatpickr נטען מ-base.html
+        const rp = flatpickr('input[name="return_date"]', { dateFormat: "Y-m-d", minDate: "today", onChange: (sd, ds) => updateLabel(ds, "return-label") });
+        flatpickr('input[name="date"]', { dateFormat: "Y-m-d", minDate: "today", onChange: (sd, ds) => { updateLabel(ds, "dept-label"); rp.set('minDate', ds); } });
+
+        const dVal = document.querySelector('input[name="date"]').value;
+        const rVal = document.querySelector('input[name="return_date"]').value;
+        if(dVal && dVal !== 'None') updateLabel(dVal, "dept-label");
+        if(rVal && rVal !== 'None') updateLabel(rVal, "return-label");
+        toggleTripType();
+    });
+
+    function checkLocation(el) {
+        const list = Array.from(document.getElementById('destinations_list').options).map(o => o.value.toLowerCase());
+        const err = document.getElementById('error-' + el.id);
+        const valid = list.some(l => l.includes(el.value.toLowerCase().trim()));
+        err.innerText = valid || !el.value ? "" : "We don't fly there yet ✈️";
+        el.style.borderColor = valid || !el.value ? "#e2e8f0" : "#e53e3e";
+    }
+
+    function validateForm() {
+        const tripType = document.querySelector('input[name="trip_type"]:checked').value;
+        const returnDate = document.querySelector('input[name="return_date"]').value;
+        if (tripType === 'round' && (!returnDate || returnDate === '')) {
+            alert("⚠️ Please select a Return Date for a round trip.\nOr switch to 'One Way' if you don't need a return flight.");
+            return false;
+        }
+        return true;
+    }
+  </script>
+{% endblock %}

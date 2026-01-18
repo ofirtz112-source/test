@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Booking Summary</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <div class="welcome">FlyTAU</div>
+    </div>
+
+    <div class="hero">
+        <h2 class="hero-title">Review Your Booking</h2>
+    </div>
+
+    <div class="flight-summary">
+        <div class="flight-summary-left">
+            <div class="flight-number">Flight No. {{ flight.id_flight }}</div>
+            <div class="flight-route">{{ flight.origin }} → {{ flight.destination }}</div>
+        </div>
+        <div class="flight-summary-right">
+            <div class="flight-time">
+                <span class="label">Departure:</span>
+                <span class="value">{{ flight.departure_display }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="booking-summary-container">
+        <h3 class="section-title">Order Summary</h3>
+
+        <table class="summary-table">
+            <thead>
+                <tr>
+                    <th style="text-align: left;">#</th>
+                    <th>Passenger Name</th>
+                    <th>Passport Number</th>
+                    <th>Seat Details</th>
+                    <th class="text-right">Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in summary_rows %}
+                <tr>
+                    <td >{{ item.index }}</td>
+                    <td class="seat-main-info"> {{ item.passenger_name }}</td>
+                    <td class="seat-main-info"> {{ item.passport }}</td>
+                    <td class="seat-main-info">{{ item.seat_display }}</td>
+                    <td class="text-right price-col">{{ item.price_fmt }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="total-row">
+                    <td colspan="2">Total Price</td>
+                    <td class="text-right">{{ total_price }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div style="margin-top: 30px; text-align: right;">
+            <form action="{{ url_for('booking_payment') }}" method="POST">
+                <button type="submit" class="btn" style="background-color: #27ae60; font-size: 1.2rem; padding: 15px 40px;">
+                    Pay & Complete Booking
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

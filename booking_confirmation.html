@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Booking Confirmed</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="container" style="display: flex; justify-content: center; align-items: center; min-height: 80vh;">
+
+    <div style="background: white; padding: 50px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 600px;">
+        <div style="font-size: 4rem; margin-bottom: 20px;">✈️</div>
+        <h1 style="color: #27ae60; font-family: 'Oswald', sans-serif; margin-bottom: 10px;">Booking Confirmed!</h1>
+        <p style="color: #555; font-size: 1.1rem;">Thank you for flying with us.</p>
+
+        <div style="margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 10px; border: 1px dashed #ccc;">
+            <p style="text-transform: uppercase; font-size: 0.9rem; color: #777; margin-bottom: 5px;">Booking Reference</p>
+            <p style="font-size: 2.5rem; font-weight: bold; color: #1a2a6c; margin: 0;">#{{ booking_id }}</p>
+        </div>
+
+        <p style="margin-bottom: 30px;">A confirmation email has been sent to <strong>{{ email }}</strong>.</p>
+
+        <a href="/" class="btn" style="background-color: #1a2a6c; padding: 12px 30px; text-decoration: none; color: white; border-radius: 5px;">Back to Home</a>
+    </div>
+
+</div>
+
+</body>
+</html>

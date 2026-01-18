@@ -1,0 +1,741 @@
+{% extends "base.html" %}
+
+{% block title %}Manager Portal - FlyTau{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<style>
+    /* === תיקון סידור אנכי (Vertical Layout) === */
+    .admin-container {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 40px;
+    }
+
+    /* === עיצוב כללי === */
+    .dashboard-wrapper {
+        max-width: 1000px;
+        width: 100%;
+        padding: 0 20px;
+    }
+
+    .wizard-card {
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        padding: 40px;
+        border: 1px solid #edf2f7;
+    }
+
+    /* סרגל התקדמות */
+    .steps-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 40px;
+        position: relative;
+    }
+
+    .steps-indicator::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: #e2e8f0;
+        z-index: 0;
+        transform: translateY(-50%);
+    }
+
+    .step-badge {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 2px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: #a0aec0;
+        z-index: 1;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .step-badge.active {
+        border-color: #2b6cb0;
+        background: #2b6cb0;
+        color: white;
+        box-shadow: 0 0 0 4px rgba(43, 108, 176, 0.2);
+    }
+
+    .step-badge.completed {
+        border-color: #2f855a;
+        background: #2f855a;
+        color: white;
+    }
+
+    .step-title {
+        font-family: 'Oswald', sans-serif;
+        font-size: 1.5rem;
+        color: #2d3748;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #f7fafc;
+        padding-bottom: 10px;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 25px;
+    }
+
+    label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #4a5568;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    input[type="text"], input[type="number"], select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+    }
+
+    input:focus { border-color: #2b6cb0; outline: none; }
+
+    /* Tom Select Styles */
+    .ts-control {
+        border-radius: 8px !important;
+        padding: 12px !important;
+        border: 1px solid #cbd5e0 !important;
+    }
+
+    /* === עיצוב רשימת הצוות === */
+    .crew-list-container {
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        height: 250px;
+        overflow-y: auto;
+        padding: 10px;
+        background: #f7fafc;
+    }
+
+    .crew-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .crew-item:hover {
+        border-color: #2b6cb0;
+        background: #ebf8ff;
+    }
+
+    .crew-item.selected {
+        background-color: #ebf8ff;
+        border-color: #2b6cb0;
+    }
+
+    .crew-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+        cursor: pointer;
+    }
+
+    .crew-name {
+        font-weight: 500;
+        color: #2d3748;
+        flex-grow: 1;
+    }
+
+    .lh-badge {
+        background: #c6f6d5;
+        color: #22543d;
+        font-size: 0.75rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    /* כפתורים */
+    .wizard-actions {
+        margin-top: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .btn-next {
+        background-color: #2b6cb0;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    .btn-next:disabled { background-color: #cbd5e0; cursor: not-allowed; }
+
+    .btn-back {
+        background-color: transparent;
+        color: #718096;
+        border: 2px solid #e2e8f0;
+        padding: 10px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .btn-back:hover { border-color: #cbd5e0; color: #2d3748; }
+
+    .info-box {
+        background: #ebf8ff;
+        border-left: 4px solid #4299e1;
+        padding: 15px;
+        border-radius: 4px;
+        color: #2b6cb0;
+        margin-bottom: 20px;
+    }
+
+    /* === טבלה עם מיון וסינון === */
+    .flights-table-card {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        margin-top: 0;
+        width: 100%;
+    }
+
+    .admin-table th {
+        cursor: pointer;
+        user-select: none;
+    }
+    .admin-table th:hover {
+        background-color: #2c3e50;
+    }
+    .sort-icon {
+        font-size: 0.8em;
+        margin-left: 5px;
+        color: #a0aec0;
+    }
+
+    /* עיצוב שורת הפילטרים */
+    .filter-row th {
+        background-color: #f8fafc !important; /* צבע רקע שונה לשורת הפילטר */
+        padding: 5px !important;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .filter-input {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .filter-input:focus {
+        border-color: #2b6cb0;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block body_class %}{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header" style="width: 100%; max-width: 1000px;">
+        <h1 style="font-family: 'Oswald'; color: #1a202c;">Flight Management</h1>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="{{ url_for('manage_aircraft') }}" class="btn-next" style="text-decoration: none; background-color: #4a5568; padding: 8px 16px; font-size: 0.9rem;">
+                Edit Aircraft
+            </a>
+            <div>Hello, {{ session.first_name }} | <a href="/logout" style="color: #c53030; text-decoration: none; font-weight: bold;">Logout</a></div>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="padding: 15px; margin-bottom: 20px; border-radius: 8px; text-align:center; width: 100%; max-width: 1000px; background: {{ '#f0fff4' if category=='success' else '#fff5f5' }}; color: {{ '#2f855a' if category=='success' else '#c53030' }}; border: 1px solid currentColor;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="dashboard-wrapper">
+        <h2 style="font-family: 'Oswald'; color: #2d3748; margin-bottom: 20px;">Create New Flight</h2>
+
+        <div class="wizard-card">
+            <div class="steps-indicator">
+                <div class="step-badge active" id="badge-1">1</div>
+                <div class="step-badge" id="badge-2">2</div>
+                <div class="step-badge" id="badge-3">3</div>
+                <div class="step-badge" id="badge-4">4</div>
+            </div>
+
+            <form action="{{ url_for('add_flight') }}" method="POST" id="wizardForm">
+                <div id="step-1" class="wizard-step">
+                    <div class="step-title">Step 1: Route & Schedule</div>
+                    <div class="form-grid">
+                        <div>
+                            <label>Route (Search by Origin)</label>
+                            <select name="id_route" id="routeSelect" required placeholder="Type Origin City...">
+                                <option value="">-- Choose Route --</option>
+                                {% for route in form_data.routes %}
+                                    <option value="{{ route.id_route }}" data-origin="{{ route.origin_city }} {{ route.origin_code }}">
+                                        {{ route.origin_city }} ({{ route.origin_code }}) ➝ {{ route.destination_city }} ({{ route.destination_code }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label>Departure Time</label>
+                            <input type="text" name="departure_time" id="deptTime" required placeholder="Select Date and Time...">
+                        </div>
+                    </div>
+                    <div class="wizard-actions" style="justify-content: flex-end;">
+                        <button type="button" class="btn-next" id="btn-check-avail" onclick="checkAvailabilityAndNext()">Next: Find Planes ➝</button>
+                    </div>
+                </div>
+
+                <div id="step-2" class="wizard-step" style="display: none;">
+                    <div class="step-title">Step 2: Select Aircraft</div>
+                    <div id="flight-info-display" class="info-box"></div>
+                    <label>Available Planes</label>
+                    <select name="id_plane" id="planeSelect" onchange="handlePlaneSelection()">
+                        <option value="">-- Choose Plane --</option>
+                    </select>
+                    <div id="plane-error" style="color: #c53030; display: none; margin-top: 10px; font-weight:bold;">❌ No planes available.</div>
+                    <div class="wizard-actions">
+                        <button type="button" class="btn-back" onclick="showStep(1)">← Back</button>
+                        <button type="button" class="btn-next" id="btn-to-step3" disabled onclick="showStep(3)">Next: Pricing ➝</button>
+                    </div>
+                </div>
+
+                <div id="step-3" class="wizard-step" style="display: none;">
+                    <div class="step-title">Step 3: Ticket Pricing</div>
+                    <div class="form-grid">
+                        <div>
+                            <label>Economy Class Price ($)</label>
+                            <input type="number" name="price_economy" id="priceEco" required min="1" placeholder="e.g. 150" oninput="validatePricing()">
+                        </div>
+                        <div id="business-price-container">
+                            <label>Business Class Price ($)</label>
+                            <input type="number" name="price_business" id="priceBusiness" min="1" placeholder="e.g. 400" oninput="validatePricing()">
+                        </div>
+                    </div>
+                    <div class="wizard-actions">
+                        <button type="button" class="btn-back" onclick="showStep(2)">← Back</button>
+                        <button type="button" class="btn-next" id="btn-to-step4" disabled onclick="showStep(4)">Next: Assign Crew ➝</button>
+                    </div>
+                </div>
+
+                <div id="step-4" class="wizard-step" style="display: none;">
+                    <div class="step-title">Step 4: Crew Assignment</div>
+                    <div id="crew-requirements" class="info-box" style="background: #fffaf0; border-color: #ed8936; color: #c05621;"></div>
+
+                    <div class="form-grid">
+                        <div>
+                            <label>Pilots (Select <span id="req-pilots"></span>)</label>
+                            <div id="pilotsContainer" class="crew-list-container">
+                                <p style="color: #a0aec0; text-align: center; margin-top: 80px;">Complete previous steps to see pilots</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label>Attendants (Select <span id="req-attendants"></span>)</label>
+                            <div id="attendantsContainer" class="crew-list-container">
+                                <p style="color: #a0aec0; text-align: center; margin-top: 80px;">Complete previous steps to see attendants</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="crew-validation-error" style="margin-top: 15px; font-weight: 600; color: #c53030;"></div>
+
+                    <div class="wizard-actions">
+                        <button type="button" class="btn-back" onclick="showStep(3)">← Back</button>
+                        <button type="submit" id="btn-finish" class="btn-next" style="background-color: #2f855a;" disabled>✨ Create Flight</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="dashboard-wrapper flights-table-card">
+        <h3 style="font-family: 'Oswald'; margin-top: 0;">Existing Flights</h3>
+        <div class="table-responsive">
+            <table class="admin-table" id="flightsTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">ID <span class="sort-icon">⇅</span></th>
+                        <th onclick="sortTable(1)">Route <span class="sort-icon">⇅</span></th>
+                        <th onclick="sortTable(2)">Date & Time <span class="sort-icon">⇅</span></th>
+                        <th onclick="sortTable(3)">Plane <span class="sort-icon">⇅</span></th>
+                        <th onclick="sortTable(4)">Status <span class="sort-icon">⇅</span></th>
+                        <th>Actions</th>
+                    </tr>
+                    <tr class="filter-row">
+                        <th><input type="text" class="filter-input" placeholder="Filter ID..." onkeyup="filterTable()"></th>
+                        <th><input type="text" class="filter-input" placeholder="Filter Route..." onkeyup="filterTable()"></th>
+                        <th><input type="text" class="filter-input" placeholder="Filter Date..." onkeyup="filterTable()"></th>
+                        <th><input type="text" class="filter-input" placeholder="Filter Plane..." onkeyup="filterTable()"></th>
+                        <th><input type="text" class="filter-input" placeholder="Filter Status..." onkeyup="filterTable()"></th>
+                        <th></th> </tr>
+                </thead>
+                <tbody>
+                    {% for f in flights %}
+                    <tr>
+                        <td>#{{ f.id_flight }}</td>
+                        <td><strong>{{ f.origin_code }} ➝ {{ f.destination_code }}</strong></td>
+                        <td>{{ f.formatted_date }}</td>
+                        <td>{{ f.id_plane }}</td>
+                        <td><span class="status-{{ f.flight_status | lower }}">{{ f.flight_status }}</span></td>
+                        <td>
+                            {% if f.can_cancel %}
+                            <form action="/manager/cancel_flight" method="POST" style="display:inline;">
+                                <input type="hidden" name="flight_id" value="{{ f.id_flight }}">
+                                <button type="submit" class="btn-cancel-admin" onclick="return confirm('Are you sure?')">Cancel</button>
+                            </form>
+                            {% elif f.flight_status == 'Scheduled' %}
+                            <span class="locked-msg" title="Less than 72h">Locked 🔒</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+    let currentPlaneSize = '';
+    let isLongHaul = false;
+    let requiredPilots = 0;
+    let requiredAttendants = 0;
+    let tsRoute;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr("#deptTime", {
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
+            minDate: "today",
+            time_24hr: true,
+            minuteIncrement: 5
+        });
+
+        tsRoute = new TomSelect("#routeSelect", {
+            create: false,
+            searchField: ['origin'],
+            dataAttr: 'data-origin',
+            sortField: { field: "text", order: "asc" }
+        });
+    });
+
+    // --- פונקציית סינון (Excel-like Filtering) ---
+    function filterTable() {
+        var table = document.getElementById("flightsTable");
+        var tr = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+        var inputs = document.getElementsByClassName("filter-input");
+
+        // לולאה על כל השורות בטבלה
+        for (var i = 0; i < tr.length; i++) {
+            var showRow = true;
+
+            // לולאה על כל עמודה שיש לה פילטר
+            for (var j = 0; j < inputs.length; j++) {
+                var filterVal = inputs[j].value.toUpperCase();
+                var td = tr[i].getElementsByTagName("td")[j]; // התא המתאים לעמודה
+
+                if (td && filterVal) {
+                    var txtValue = td.textContent || td.innerText;
+                    // אם הערך בתא לא מכיל את מה שכתוב בפילטר -> אל תציג את השורה
+                    if (txtValue.toUpperCase().indexOf(filterVal) === -1) {
+                        showRow = false;
+                        break; // מספיק שעמודה אחת לא מתאימה כדי להסתיר את השורה
+                    }
+                }
+            }
+
+            tr[i].style.display = showRow ? "" : "none";
+        }
+    }
+
+    // --- פונקציית מיון (Sorting) ---
+    function sortTable(n) {
+        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+        table = document.getElementById("flightsTable");
+        switching = true;
+        dir = "asc";
+
+        while (switching) {
+            switching = false;
+            // שים לב: אנחנו מתחילים מ-2 כי יש לנו שתי שורות כותרת (כותרות + פילטרים)
+            rows = table.rows;
+            // הלולאה צריכה להתחיל משורת הנתונים הראשונה ב-tbody
+            // אבל table.rows כולל את ה-thead. נשתמש ב-tbody ישירות בתוך הלולאה או נדלג.
+            // דרך בטוחה יותר: למיין רק את השורות שב-tbody
+            var tbody = table.getElementsByTagName("tbody")[0];
+            var bRows = tbody.getElementsByTagName("tr");
+
+            for (i = 0; i < (bRows.length - 1); i++) {
+                shouldSwitch = false;
+                x = bRows[i].getElementsByTagName("TD")[n];
+                y = bRows[i + 1].getElementsByTagName("TD")[n];
+
+                let xVal = x.textContent || x.innerText;
+                let yVal = y.textContent || y.innerText;
+
+                if (dir == "asc") {
+                    if (xVal.toLowerCase() > yVal.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else if (dir == "desc") {
+                    if (xVal.toLowerCase() < yVal.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                bRows[i].parentNode.insertBefore(bRows[i + 1], bRows[i]);
+                switching = true;
+                switchcount ++;
+            } else {
+                if (switchcount == 0 && dir == "asc") {
+                    dir = "desc";
+                    switching = true;
+                }
+            }
+        }
+    }
+
+    // --- שאר הלוגיקה (Wizard, Crew, API) ---
+    function updateProgress(step) {
+        document.querySelectorAll('.step-badge').forEach(b => b.classList.remove('active', 'completed'));
+        for(let i=1; i < step; i++) {
+            document.getElementById('badge-' + i).classList.add('completed');
+            document.getElementById('badge-' + i).innerHTML = '✓';
+        }
+        const current = document.getElementById('badge-' + step);
+        current.classList.add('active');
+        current.innerHTML = step;
+    }
+
+    function showStep(stepNumber) {
+        document.querySelectorAll('.wizard-step').forEach(el => el.style.display = 'none');
+        document.getElementById('step-' + stepNumber).style.display = 'block';
+        updateProgress(stepNumber);
+    }
+
+    async function checkAvailabilityAndNext() {
+        const routeId = tsRoute.getValue();
+        const deptTime = document.getElementById('deptTime').value;
+        const nextBtn = document.getElementById('btn-check-avail');
+
+        if (!routeId || !deptTime) {
+            alert("Please select route and departure time.");
+            return;
+        }
+
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = '<span class="spinner"></span> Checking...';
+
+        try {
+            const response = await fetch('/api/check_availability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ route_id: routeId, dept_time: deptTime })
+            });
+
+            const data = await response.json();
+
+            if (!data.can_proceed) {
+                alert("⚠️ " + (data.error_msg || "Insufficient resources."));
+                return;
+            }
+
+            isLongHaul = data.is_long_haul;
+            document.getElementById('flight-info-display').innerHTML =
+                `<strong>Flight Info:</strong> Arrival: ${data.arrival_time} • Type: ${isLongHaul ? 'Long Haul 🌎' : 'Short Haul ✈️'}`;
+
+            const planeSelect = document.getElementById('planeSelect');
+            planeSelect.innerHTML = '<option value="">-- Choose Plane --</option>';
+            data.planes.forEach(p => {
+                if(p.is_valid) {
+                    const opt = document.createElement('option');
+                    opt.value = p.id_plane;
+                    opt.text = `${p.model} (ID: ${p.id_plane}) - ${p.size}`;
+                    opt.setAttribute('data-size', p.size);
+                    planeSelect.add(opt);
+                }
+            });
+
+            createCrewList('pilotsContainer', 'pilots', data.pilots);
+            createCrewList('attendantsContainer', 'attendants', data.attendants);
+
+            showStep(2);
+
+        } catch (err) {
+            console.error(err);
+            alert("Error connecting to server.");
+        } finally {
+            nextBtn.disabled = false;
+            nextBtn.innerText = "Next: Find Planes ➝";
+        }
+    }
+
+    function createCrewList(containerId, inputName, crewList) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        if (crewList.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color: #c53030; margin-top:20px;">No available crew found.</p>';
+            return;
+        }
+
+        crewList.forEach(member => {
+            if (member.is_valid) {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'crew-item';
+                itemDiv.onclick = function(e) {
+                    if (e.target.type !== 'checkbox') {
+                        const cb = this.querySelector('input');
+                        cb.checked = !cb.checked;
+                        toggleHighlight(this, cb.checked);
+                        validateCrewSelection();
+                    }
+                };
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = inputName;
+                checkbox.value = member.id_worker;
+                checkbox.onclick = function(e) {
+                    e.stopPropagation();
+                    toggleHighlight(itemDiv, this.checked);
+                    validateCrewSelection();
+                };
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'crew-name';
+                let html = `${member.name}`;
+                if (member.qualified_for_long_haul) {
+                    html += `<span class="lh-badge">LH</span>`;
+                }
+                nameSpan.innerHTML = html;
+
+                itemDiv.appendChild(checkbox);
+                itemDiv.appendChild(nameSpan);
+                container.appendChild(itemDiv);
+            }
+        });
+    }
+
+    function toggleHighlight(div, isChecked) {
+        if (isChecked) div.classList.add('selected');
+        else div.classList.remove('selected');
+    }
+
+    function handlePlaneSelection() {
+        const select = document.getElementById('planeSelect');
+        const nextBtn = document.getElementById('btn-to-step3');
+        const selectedOpt = select.options[select.selectedIndex];
+
+        if (!selectedOpt || !selectedOpt.value) {
+            nextBtn.disabled = true;
+            return;
+        }
+
+        nextBtn.disabled = false;
+        currentPlaneSize = selectedOpt.getAttribute('data-size');
+
+        const busContainer = document.getElementById('business-price-container');
+        const busInput = document.getElementById('priceBusiness');
+
+        if (currentPlaneSize === 'Large') {
+            busContainer.style.display = 'block';
+            busInput.required = true;
+            requiredPilots = 3; requiredAttendants = 6;
+        } else {
+            busContainer.style.display = 'none';
+            busInput.required = false;
+            busInput.value = "";
+            requiredPilots = 2; requiredAttendants = 3;
+        }
+
+        document.getElementById('crew-requirements').innerText = `Requirements: ${requiredPilots} Pilots, ${requiredAttendants} Flight Attendants`;
+        document.getElementById('req-pilots').innerText = requiredPilots;
+        document.getElementById('req-attendants').innerText = requiredAttendants;
+
+        validatePricing();
+    }
+
+    function validatePricing() {
+        const ecoVal = document.getElementById('priceEco').value;
+        const busVal = document.getElementById('priceBusiness').value;
+        const nextBtn = document.getElementById('btn-to-step4');
+
+        let valid = (ecoVal > 0);
+        if (currentPlaneSize === 'Large') {
+            valid = valid && (busVal > 0);
+        }
+        nextBtn.disabled = !valid;
+    }
+
+    function validateCrewSelection() {
+        const pilotsChecked = document.querySelectorAll('#pilotsContainer input[type="checkbox"]:checked').length;
+        const attendantsChecked = document.querySelectorAll('#attendantsContainer input[type="checkbox"]:checked').length;
+
+        const errorDiv = document.getElementById('crew-validation-error');
+        const finishBtn = document.getElementById('btn-finish');
+
+        let messages = [];
+        if (pilotsChecked !== requiredPilots) messages.push(`Need ${requiredPilots} pilots (Selected: ${pilotsChecked})`);
+        if (attendantsChecked !== requiredAttendants) messages.push(`Need ${requiredAttendants} attendants (Selected: ${attendantsChecked})`);
+
+        if (messages.length > 0) {
+            errorDiv.innerText = "❌ " + messages.join(" | ");
+            errorDiv.style.color = "#c53030";
+            finishBtn.disabled = true;
+            finishBtn.style.backgroundColor = "#cbd5e0";
+        } else {
+            errorDiv.innerText = "✅ Crew selection valid";
+            errorDiv.style.color = "#2f855a";
+            finishBtn.disabled = false;
+            finishBtn.style.backgroundColor = "#2f855a";
+        }
+    }
+</script>
+{% endblock %}

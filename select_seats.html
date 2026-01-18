@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Select Seats</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+  <div class="container">
+
+    <div class="top-bar">
+      <div class="welcome">FlyTAU</div>
+      <div class="nav-area">
+          <a class="nav-btn" href="/">Back to Search</a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="error">
+          {% for message in messages %}
+            <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="hero">
+      <h2 class="hero-title">Select Your Seats</h2>
+    </div>
+
+    <div class="flight-summary">
+      <div class="flight-summary-left">
+        <div class="flight-number">Flight No. {{ flight.id_flight }}</div>
+        <div class="flight-route">{{ flight.origin }} → {{ flight.destination }}</div>
+      </div>
+      <div class="flight-summary-right">
+        <div class="flight-time">
+          <span class="label">Departure:</span>
+          <span class="value">{{ flight.departure_display }}</span>
+        </div>
+        <div class="flight-time">
+          <span class="label">Arrival:</span>
+          <span class="value">{{ flight.arrival_display }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="seat-legend">
+        <div class="legend-item">
+            <span class="legend-box business-available"></span>
+            <span class="legend-text">Business Class</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-box economy-available"></span>
+            <span class="legend-text">Economy Class</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-box occupied"></span>
+            <span class="legend-text">Taken</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-box selected"></span>
+            <span class="legend-text">Selected</span>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('process_booking') }}">
+
+        <input type="hidden" name="flight_id" value="{{ flight.id_flight }}">
+
+        <div class="plane-container">
+
+            {% if plane.has_class('Business') %}
+            <div class="cabin-section">
+                <h3 class="cabin-title">Business Class</h3>
+                <div class="cabin-price">{{ prices['Business'] }} per seat</div>
+                {% set rows, cols = plane.rows_cols('Business') %}
+                <div class="seats-row header-row">
+                    <div class="row-number-placeholder"></div>
+                    <div class="seats-cluster">
+                        {% for c in range(cols) %}
+                            <div class="col-header">{{ col_letters[c] }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% for r in range(1, rows + 1) %}
+                <div class="seats-row">
+                    <div class="row-number">{{ r }}</div>
+                    <div class="seats-cluster">
+                        {% for c in range(cols) %}
+                            {% set letter = col_letters[c] %}
+                            {% set is_taken = (r, letter) in occupied['Business'] %}
+                            <div class="seat-wrapper">
+                                <input type="checkbox"
+                                       id="bus-{{r}}-{{letter}}"
+                                       name="seats"
+                                       value="Business-{{r}}-{{letter}}"
+                                       {% if is_taken %}disabled{% endif %}>
+                                <label for="bus-{{r}}-{{letter}}"
+                                       class="seat business {% if is_taken %}occupied{% endif %}">
+                                    {{ r }}{{ letter }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="cabin-section">
+                <h3 class="cabin-title">Economy Class</h3>
+                <div class="cabin-price">{{ prices['Economy'] }} per seat</div>
+                {% set bus_rows_count = plane.rows_cols('Business')[0] %}
+                {% set eco_rows, eco_cols = plane.rows_cols('Economy') %}
+                <div class="seats-row header-row">
+                    <div class="row-number-placeholder"></div>
+                    <div class="seats-cluster">
+                        {% for c in range(eco_cols) %}
+                            <div class="col-header">{{ col_letters[c] }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% for r in range(bus_rows_count + 1, bus_rows_count + eco_rows + 1) %}
+                <div class="seats-row">
+                    <div class="row-number">{{ r }}</div>
+                    <div class="seats-cluster">
+                        {% for c in range(eco_cols) %}
+                            {% set letter = col_letters[c] %}
+                            {% set is_taken = (r, letter) in occupied['Economy'] %}
+                            <div class="seat-wrapper">
+                                <input type="checkbox"
+                                       id="eco-{{r}}-{{letter}}"
+                                       name="seats"
+                                       value="Economy-{{r}}-{{letter}}"
+                                       {% if is_taken %}disabled{% endif %}>
+                                <label for="eco-{{r}}-{{letter}}"
+                                       class="seat economy {% if is_taken %}occupied{% endif %}">
+                                    <span class="seat-code">{{ r }}{{ letter }}</span>
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="action-area">
+                <button type="submit" class="continue-btn">Continue</button>
+            </div>
+
+        </div>
+    </form>
+  </div>
+</body>
+</html>

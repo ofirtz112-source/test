@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}FlyTAU - Manager Portal{% endblock %}
+
+{% block body_class %}manager-page-body{% endblock %}
+
+{% block content %}
+  <div class="login-wrapper">
+   <div class="login-card manager-card">
+
+    <div class="form-logo">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="FlyTAU Logo">
+    </div>
+
+    <h2 class="admin-title">FlyTAU Admin</h2>
+    <p class="admin-subtitle">RESTRICTED ACCESS • AUTHORIZED PERSONNEL ONLY</p>
+
+    <form method="post" action="{{ url_for('manager_login_page') }}" class="styled-form">
+
+        <div class="input-group">
+            <label>Worker ID</label>
+            <input type="text" name="id_worker" required value="{{ id_worker or '' }}" placeholder="ID">
+        </div>
+
+        <div class="input-group">
+            <label>System Password</label>
+            <div class="password-wrapper">
+                <input type="password" name="password" required placeholder="••••••••">
+                <button type="button" class="toggle-password-btn" onclick="togglePassword(this)">👁️</button>
+            </div>
+        </div>
+
+        {% if error %}
+            <div class="error-message">{{ error }}</div>
+        {% endif %}
+
+       <button type="submit" class="btn-full btn-manager">
+           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 10px;">
+               <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+           </svg>
+           Secure Login
+       </button>
+
+    </form>
+
+    <div class="admin-footer">
+        <span class="not-admin-label">NOT AN ADMIN?</span>
+        <a href="/" class="back-home-link">← Back to Homepage</a>
+    </div>
+
+   </div>
+  </div>
+{% endblock %}

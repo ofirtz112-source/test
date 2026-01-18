@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}FlyTAU - Login{% endblock %}
+
+{% block body_class %}login-page-body{% endblock %}
+
+{% block content %}
+  <div class="login-wrapper">
+      <div class="login-card">
+
+        <div class="form-logo">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="FlyTAU Logo">
+        </div>
+
+        <h1 class="form-title">Welcome Back</h1>
+        <p class="form-subtitle">Please enter your details to sign in.</p>
+
+        <form method="post" action="{{ url_for('register_login_page') }}" class="styled-form">
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" name="email" placeholder="example@email.com" required value="{{ email or '' }}">
+            </div>
+
+            <div class="input-group">
+                <label>Password</label>
+                <div class="password-wrapper">
+                    <input type="password" name="password" placeholder="••••••••" required>
+                    <button type="button" class="toggle-password-btn" onclick="togglePassword(this)">👁️</button>
+                </div>
+            </div>
+
+            {% if error %}
+                <div class="error-message">{{ error }}</div>
+            {% endif %}
+
+           <button type="submit" class="btn-full">Sign In</button>
+        </form>
+
+        <div class="form-footer">
+            <p>Not registered yet?</p>
+            <a href="{{ url_for('create_account_page') }}" class="create-account-link">Create an Account</a>
+            <div style="margin-top: 15px;">
+                <a href="/" class="back-home-link">← Back to Homepage</a>
+            </div>
+        </div>
+
+      </div>
+  </div>
+{% endblock %}

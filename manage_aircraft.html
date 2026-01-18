@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="font-family: 'Oswald'; margin: 0;">Resource Management</h1>
+        <a href="{{ url_for('manager_dashboard') }}" class="btn-back" style="text-decoration:none;">Back to Dashboard</a>
+    </div>
+
+    {% if item_to_edit or add_type %}
+    <div class="wizard-card" style="margin-bottom: 40px; border: 2px solid #2b6cb0; padding: 25px;">
+        <h3 style="font-family: 'Oswald'; color: #2b6cb0;">
+            {{ 'Edit' if item_to_edit else 'Add New' }} {{ (edit_type or add_type) | capitalize }}
+        </h3>
+
+        <form action="{{ url_for('save_resource') }}" method="POST">
+            <input type="hidden" name="resource_type" value="{{ edit_type or add_type }}">
+            <input type="hidden" name="mode" value="{{ 'edit' if item_to_edit else 'add' }}">
+
+            <div class="form-grid">
+                {% if edit_type == 'aircraft' or add_type == 'aircraft' %}
+                    <div>
+                        <label>Aircraft ID</label>
+                        <input type="text" name="id_plane" value="{{ item_to_edit.id_plane if item_to_edit else '' }}" {{ 'readonly' if item_to_edit }} required>
+                    </div>
+                    <div>
+                        <label>Manufacturer</label>
+                        <select name="manufacturer" required>
+                            <option value="" disabled {{ 'selected' if not item_to_edit }}>Choose Manufacturer...</option>
+                            <option value="Boeing" {{ 'selected' if item_to_edit and item_to_edit.manufacturer == 'Boeing' }}>Boeing</option>
+                            <option value="Airbus" {{ 'selected' if item_to_edit and item_to_edit.manufacturer == 'Airbus' }}>Airbus</option>
+                            <option value="Dassault" {{ 'selected' if item_to_edit and item_to_edit.manufacturer == 'Dassault' }}>Dassault</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Size</label>
+                        <select name="size" required>
+                            <option value="" disabled {{ 'selected' if not item_to_edit }}>Choose Size...</option>
+                            <option value="Small" {{ 'selected' if item_to_edit and item_to_edit.size == 'Small' }}>Small</option>
+                            <option value="Large" {{ 'selected' if item_to_edit and item_to_edit.size == 'Large' }}>Large</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Purchase Date</label>
+                        <input type="date" name="purchase_date" value="{{ item_to_edit.purchase_date if item_to_edit else '' }}" required>
+                    </div>
+                {% else %}
+                    <div>
+                        <label>Worker ID</label>
+                        <input type="text" name="id_worker" value="{{ item_to_edit.id_worker if item_to_edit else '' }}" {{ 'readonly' if item_to_edit }} required placeholder="e.g. 201">
+                    </div>
+                    <div>
+                        <label>First Name</label>
+                        <input type="text" name="first_name" value="{{ item_to_edit.first_name if item_to_edit else '' }}" required>
+                    </div>
+                    <div>
+                        <label>Last Name</label>
+                        <input type="text" name="last_name" value="{{ item_to_edit.last_name if item_to_edit else '' }}" required>
+                    </div>
+                    <div>
+                        <label>Phone Number</label>
+                        <input type="text" name="phone" value="{{ item_to_edit.phone_number if item_to_edit else '' }}" required>
+                    </div>
+                    <div>
+                        <label>Start Date</label>
+                        <input type="date" name="start_date" value="{{ item_to_edit.start_date if item_to_edit else '' }}" required>
+                    </div>
+                    <div>
+                        <label>City</label>
+                        <input type="text" name="city" value="{{ item_to_edit.city if item_to_edit else '' }}" required>
+                    </div>
+                    <div>
+                        <label>Street</label>
+                        <input type="text" name="street" value="{{ item_to_edit.street if item_to_edit else '' }}" required>
+                    </div>
+                    <div>
+                        <label>House Number</label>
+                        <input type="number" name="house_number" value="{{ item_to_edit.house_number if item_to_edit else '' }}" required>
+                    </div>
+
+                    <div style="grid-column: 1 / -1; margin-top: 10px; display: flex; align-items: center;">
+                        <input type="checkbox" name="long_flights" id="longFlights" style="width: auto; margin-right: 10px;"
+                               {{ 'checked' if item_to_edit and item_to_edit.long_flights else '' }}>
+                        <label for="longFlights" style="margin: 0; font-weight: normal;">Qualified for Long Haul Flights?</label>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div style="margin-top: 25px; display: flex; gap: 15px;">
+                <button type="submit" class="btn-next">Save Changes</button>
+                <a href="{{ url_for('manage_aircraft') }}" class="btn-back" style="text-decoration:none;">Cancel</a>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <div style="display: grid; grid-template-columns: 1fr; gap: 40px;">
+        <section>
+            <h3 style="font-family: 'Oswald'; margin-top: 0;">Aircraft Fleet</h3>
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table class="admin-table">
+                    <thead>
+                        <tr><th>ID</th><th>Manufacturer</th><th>Size</th><th> </th></tr>
+                    </thead>
+                    <tbody>
+                        {% for p in planes %}
+                        <tr>
+                            <td>{{ p.id_plane }}</td>
+                            <td>{{ p.manufacturer }}</td>
+                            <td>{{ p.size }}</td>
+                            <td>
+                                <a href="{{ url_for('manage_aircraft', edit_type='aircraft', edit_id=p.id_plane) }}" style="text-decoration:none;">✏️</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 10px; text-align: right;">
+                <a href="{{ url_for('manage_aircraft', add_type='aircraft') }}" style="text-decoration:none; font-size: 1.5rem;" title="Add Aircraft">➕</a>
+            </div>
+        </section>
+
+        <section>
+            <h3 style="font-family: 'Oswald'; margin-top: 0;">Pilots</h3>
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table class="admin-table">
+                    <thead>
+                        <tr><th>ID</th><th>First Name</th><th>Last Name</th><th>Long flights</th><th> </th></tr>
+                    </thead>
+                    <tbody>
+                        {% for pilot in pilots %}
+                        <tr>
+                            <td>{{ pilot.id_worker }}</td>
+                            <td>{{ pilot.first_name }}</td>
+                            <td>{{ pilot.last_name }}</td>
+                            <td>{{ '✔️' if pilot.long_flights else '✖️' }}</td>
+                            <td>
+                                <a href="{{ url_for('manage_aircraft', edit_type='pilot', edit_id=pilot.id_worker) }}" style="text-decoration:none;">✏️</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 10px; text-align: right;">
+                <a href="{{ url_for('manage_aircraft', add_type='pilot') }}" style="text-decoration:none; font-size: 1.5rem;" title="Add Pilot">➕</a>
+            </div>
+        </section>
+
+        <section>
+            <h3 style="font-family: 'Oswald'; margin-top: 0;">Service Crew</h3>
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table class="admin-table">
+                    <thead>
+                        <tr><th>ID</th><th>First Name</th><th>Last Name</th><th>Long flights</th><th> </th></tr>
+                    </thead>
+                    <tbody>
+                        {% for fa in attendants %}
+                        <tr>
+                            <td>{{ fa.id_worker }}</td>
+                            <td>{{ fa.first_name }}</td>
+                            <td>{{ fa.last_name }}</td>
+                            <td>{{ '✔️' if fa.long_flights else '✖️' }}</td>
+                            <td>
+                                <a href="{{ url_for('manage_aircraft', edit_type='attendant', edit_id=fa.id_worker) }}" style="text-decoration:none;">✏️</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 10px; text-align: right;">
+                <a href="{{ url_for('manage_aircraft', add_type='attendant') }}" style="text-decoration:none; font-size: 1.5rem;" title="Add Attendant">➕</a>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
