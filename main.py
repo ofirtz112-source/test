@@ -523,4 +523,4 @@ def save_resource():
     return redirect(url_for('manage_aircraft'))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5000)
