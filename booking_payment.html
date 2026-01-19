@@ -1,3 +1,7 @@
+<!--Booking payment page.
+Displays the selected flight details, passenger and seat information,
+price breakdown, and completes the payment for the booking.-->
+
 {% extends 'base.html' %}
 
 {% block title %}Booking Summary - FlyTAU{% endblock %}
@@ -61,8 +65,8 @@
 
         <div style="margin-top: 30px; text-align: right;">
             <form action="{{ url_for('booking_payment') }}" method="POST">
-                <button type="submit" class="btn" style="background-color: #27ae60; font-size: 1.2rem; padding: 15px 40px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold;">
-                    Pay & Complete Booking
+                <button type="submit" class="btn btn-pay-now">
+                   Pay Now
                 </button>
             </form>
         </div>
