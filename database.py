@@ -367,7 +367,6 @@ class Database:
             JOIN routes r ON f.id_route = r.id_route
             JOIN airports a1 ON r.origin_code = a1.airport_code
             JOIN airports a2 ON r.destination_code = a2.airport_code
-            registered_email
             WHERE b.registered_email = %s
             ORDER BY f.departure_time DESC
         """
