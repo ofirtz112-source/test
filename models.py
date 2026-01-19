@@ -18,11 +18,13 @@ class Flight:
         else:
             raise ValueError(f"Flight ID {flight_id} not found.")
 
+    """Searches for available flights based on the specified date and route, formatting the raw database results for the application's view"""
     @staticmethod
     def search(date, origin, destination):
         raw_flights = db.get_flight_data(date_str=date, origin=origin, destination=destination)
         return prepare_flights_for_view(raw_flights)
 
+"""Represents an aircraft entity, storing manufacturer details and providing methods to retrieve seat-map dimensions for specific cabin classes"""
 class Plane:
     def __init__(self, id_plane, manufacturer, purchase_date):
         self.id_plane = id_plane
@@ -39,6 +41,7 @@ class Plane:
             return 0, 0
         return int(d["rows"]), int(d["cols"])
 
+"""Specialized subclasses that extend the base Plane class to implement specific seat-map configurations for single-class (Small) and dual-class (Big) aircraft"""
 class SmallPlane(Plane):
     def __init__(self, id_plane, manufacturer, purchase_date, eco_rows, eco_cols):
         super().__init__(id_plane, manufacturer, purchase_date)
@@ -52,6 +55,7 @@ class BigPlane(Plane):
         self.dimensions["Business"] = {"rows": int(bus_rows), "cols": int(bus_cols)}
 
 # --- Section 2: User Authentication ---
+"""A foundational class that represents all system participants, storing core identity data and providing property methods to verify user roles and access levels"""
 class User:
     def __init__(self, role="guest", user_id=None, first_name=None, last_name=None, phone_numbers=None):
         self.role = role
@@ -75,10 +79,10 @@ class User:
     def __repr__(self):
         return f"<{self.__class__.__name__}: {self.first_name}>"
 
+# --- Section 3: Customer Actions ---
 class Guest(User):
     def __init__(self):
         super().__init__(role="guest")
-
 
 class Customer(User):
     def __init__(self, email, first_name, last_name=None, passport=None, phone_numbers=None, date_of_birth=None):
@@ -92,6 +96,7 @@ class Customer(User):
         self.passport = passport
         self.date_of_birth = date_of_birth
 
+    """Manages the customer lifecycle by handling secure registration and authentication, including specific validation for unique identifiers like email and passport numbers"""
     @property
     def email(self):
         return self.user_id
@@ -115,113 +120,8 @@ class Customer(User):
         except Exception as e:
             return False, str(e)
 
-class Manager(User):
-    def __init__(self, id_worker, first_name):
-        super().__init__(user_id=id_worker, first_name=first_name)
-        self.id_worker = id_worker
-
-    @staticmethod
-    def login(id_worker, password):
-        manager_data = db.manager_login(id_worker, password)
-        if manager_data:
-            return Manager(id_worker=manager_data['id_worker'], first_name=manager_data['first_name'])
-        return None
-
-    @staticmethod
-    def cancel_flight(flight_id):
-        return db.cancel_flight_full_logic(flight_id)
-
-    @staticmethod
-    def validate_resources(dept_time, route_id):
-        result = db.get_available_resources(dept_time, route_id)
-        if not result:
-            return None
-        v_planes = [p for p in result.get('planes', []) if p.get('is_valid')]
-        v_pilots = [p for p in result.get('pilots', []) if p.get('is_valid')]
-        v_attendants = [a for a in result.get('attendants', []) if a.get('is_valid')]
-        is_long = result.get('is_long_haul', False)
-        min_pilots = 3 if is_long else 2
-        min_attendants = 6 if is_long else 3
-        has_plane = len(v_planes) > 0
-        has_pilots = len(v_pilots) >= min_pilots
-        has_attendants = len(v_attendants) >= min_attendants
-
-        can_proceed = has_plane and has_pilots and has_attendants
-
-        error_msg = ""
-        if not can_proceed:
-            if not has_plane:
-                error_msg = "No available aircraft (or the aircraft is too small for a long-haul flight)"
-            elif not has_pilots:
-                error_msg = f"Pilot shortage. Required {min_pilots}, found available: {len(v_pilots)}."
-            else:
-                error_msg = f"Pilot shortage. Required {min_attendants}, found available: {len(v_attendants)}."
-
-        return {
-            "can_proceed": can_proceed,
-            "error_msg": error_msg,
-            "planes": result.get('planes', []),
-            "pilots": result.get('pilots', []),
-            "attendants": result.get('attendants', []),
-            "is_long_haul": is_long,
-            "arrival_time": result.get('arrival_time', "N/A")
-        }
-
-    @staticmethod
-    def get_dashboard_data():
-        flights = db.get_all_flights_for_manager()
-        now = datetime.now()
-        for f in flights:
-            f['formatted_date'] = _format_datetime(f['departure_time'])
-            crew = db.get_flight_crew_names(f['id_flight'])
-            f['pilots_list'] = ", ".join(crew['pilots'])
-            f['attendants_list'] = ", ".join(crew['attendants'])
-            time_diff = f['departure_time'] - now
-            f['can_cancel'] = (f['flight_status'] == 'Scheduled' and
-                               time_diff.total_seconds() > 72 * 3600)
-
-        routes = db.get_routes_only()
-        return flights, routes
-
-    @staticmethod
-    def create_flight(route_id, plane_id, departure_time, pilots_list, attendants_list,
-                      manager_id, price_economy, price_business):  # <--- הוספנו פרמטרים
-        return db.add_new_flight(
-            route_id, plane_id, departure_time, pilots_list, attendants_list, manager_id,
-            price_economy, price_business
-        )
-
-    @staticmethod
-    def get_all_resources():
-        return {
-            'pilots': db.get_all_pilots(),
-            'attendants': db.get_all_flight_attendants(),
-            'planes': db.get_all_planes()
-        }
-
-    @staticmethod
-    def add_new_resource(resource_type, form_data):
-        return db.add_resource(resource_type, form_data)
-
-    @staticmethod
-    def update_existing_resource(resource_type, form_data):
-        return db.update_resource(resource_type, form_data)
-
-    @staticmethod
-    def get_single_resource(resource_type, resource_id):
-        all_data = Manager.get_all_resources()
-        target_list = all_data.get(resource_type + 's', [])
-        if resource_type == 'aircraft':
-            target_list = all_data.get('planes', [])
-
-        id_key = 'id_plane' if resource_type == 'aircraft' else 'id_worker'
-        for item in target_list:
-            if str(item[id_key]) == str(resource_id):
-                return item
-        return None
-
-# --- Section 3: Customer Actions ---
 class Booking:
+    """Consolidates raw ticket data into organized booking records and categorizes them by status and departure time to provide a structured itinerary history for the user"""
     @staticmethod
     def get_user_bookings(email):
         raw_data = db.get_customer_bookings(email)
@@ -263,6 +163,7 @@ class Booking:
                 cancelled_sys.append(b)
         return confirmed, completed, cancelled_you, cancelled_sys
 
+    """Retrieves the complete details of a single booking by its unique ID and associated email, returning a structured record or None if no match is found"""
     @staticmethod
     def get_specific_booking(email, booking_id):
         raw_data = db.get_single_booking(email, booking_id)
@@ -287,7 +188,6 @@ class Booking:
                 'class': row['class_type']
             })
         return booking
-
 
     @staticmethod
     def organize_bookings(bookings_list):
@@ -337,3 +237,117 @@ class Booking:
         if success:
             return True, f"Booking cancelled. A 5% fee (${fee:.2f}) was charged."
         return False, "Database update failed."
+
+# --- Section 4: Management ---
+class Manager(User):
+    def __init__(self, id_worker, first_name):
+        super().__init__(user_id=id_worker, first_name=first_name)
+        self.id_worker = id_worker
+
+    """Authenticates administrative credentials by verifying the worker ID and password, returning a Manager instance upon successful verification to initialize a secure session"""
+    @staticmethod
+    def login(id_worker, password):
+        manager_data = db.manager_login(id_worker, password)
+        if manager_data:
+            return Manager(id_worker=manager_data['id_worker'], first_name=manager_data['first_name'])
+        return None
+
+    """Triggers the comprehensive administrative cancellation logic, which updates the flight status in the system and automatically manages the cancellation of all associated passenger bookings"""
+    @staticmethod
+    def cancel_flight(flight_id):
+        return db.cancel_flight_full_logic(flight_id)
+
+    @staticmethod
+    def validate_resources(dept_time, route_id):
+        result = db.get_available_resources(dept_time, route_id)
+        if not result:
+            return None
+        v_planes = [p for p in result.get('planes', []) if p.get('is_valid')]
+        v_pilots = [p for p in result.get('pilots', []) if p.get('is_valid')]
+        v_attendants = [a for a in result.get('attendants', []) if a.get('is_valid')]
+        is_long = result.get('is_long_haul', False)
+        min_pilots = 3 if is_long else 2
+        min_attendants = 6 if is_long else 3
+        has_plane = len(v_planes) > 0
+        has_pilots = len(v_pilots) >= min_pilots
+        has_attendants = len(v_attendants) >= min_attendants
+
+        can_proceed = has_plane and has_pilots and has_attendants
+
+        error_msg = ""
+        if not can_proceed:
+            if not has_plane:
+                error_msg = "No available aircraft (or the aircraft is too small for a long-haul flight)"
+            elif not has_pilots:
+                error_msg = f"Pilot shortage. Required {min_pilots}, found available: {len(v_pilots)}."
+            else:
+                error_msg = f"Pilot shortage. Required {min_attendants}, found available: {len(v_attendants)}."
+
+        return {
+            "can_proceed": can_proceed,
+            "error_msg": error_msg,
+            "planes": result.get('planes', []),
+            "pilots": result.get('pilots', []),
+            "attendants": result.get('attendants', []),
+            "is_long_haul": is_long,
+            "arrival_time": result.get('arrival_time', "N/A")
+        }
+
+    """Evaluates the operational feasibility of a proposed flight by verifying the availability of aircraft and crew, ensuring that staffing levels meet specific safety and regulatory requirements based on flight duration"""
+    @staticmethod
+    def get_dashboard_data():
+        flights = db.get_all_flights_for_manager()
+        now = datetime.now()
+        for f in flights:
+            f['formatted_date'] = _format_datetime(f['departure_time'])
+            crew = db.get_flight_crew_names(f['id_flight'])
+            f['pilots_list'] = ", ".join(crew['pilots'])
+            f['attendants_list'] = ", ".join(crew['attendants'])
+            time_diff = f['departure_time'] - now
+            f['can_cancel'] = (f['flight_status'] == 'Scheduled' and
+                               time_diff.total_seconds() > 72 * 3600)
+
+        routes = db.get_routes_only()
+        return flights, routes
+
+    """Finalizes the flight scheduling process by committing the selected route, aircraft, and assigned crew members to the database while establishing the pricing structure for all cabin classes"""
+    @staticmethod
+    def create_flight(route_id, plane_id, departure_time, pilots_list, attendants_list,
+                      manager_id, price_economy, price_business):  # <--- הוספנו פרמטרים
+        return db.add_new_flight(
+            route_id, plane_id, departure_time, pilots_list, attendants_list, manager_id,
+            price_economy, price_business
+        )
+
+    """Retrieves a complete inventory of all operational assets—including pilots, flight attendants, and aircraft—providing a centralized data source for administrative management"""
+    @staticmethod
+    def get_all_resources():
+        return {
+            'pilots': db.get_all_pilots(),
+            'attendants': db.get_all_flight_attendants(),
+            'planes': db.get_all_planes()
+        }
+
+    """Facilitates the expansion of operational capacity by processing form-submitted data to register new pilots, flight attendants, or aircraft within the organizational database"""
+    @staticmethod
+    def add_new_resource(resource_type, form_data):
+        return db.add_resource(resource_type, form_data)
+
+    """Enables the modification of existing airline assets by processing updated form data to refresh pilot, attendant, or aircraft records within the centralized database"""
+    @staticmethod
+    def update_existing_resource(resource_type, form_data):
+        return db.update_resource(resource_type, form_data)
+
+    """Identifies and retrieves a specific operational resource by its unique identifier, enabling precise data editing and record management within the administrative interface"""
+    @staticmethod
+    def get_single_resource(resource_type, resource_id):
+        all_data = Manager.get_all_resources()
+        target_list = all_data.get(resource_type + 's', [])
+        if resource_type == 'aircraft':
+            target_list = all_data.get('planes', [])
+
+        id_key = 'id_plane' if resource_type == 'aircraft' else 'id_worker'
+        for item in target_list:
+            if str(item[id_key]) == str(resource_id):
+                return item
+        return None
