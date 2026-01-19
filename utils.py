@@ -1,39 +1,33 @@
 from datetime import datetime
-import math
-import string
 from database import Database
 
 db = Database()
 
+#Converts a datetime value to a readable string format for display in HTML
 def _format_datetime(value):
-    """הופך אובייקט זמן למחרוזת קריאה עבור ה-HTML"""
     if value is None:
         return ""
     if isinstance(value, datetime):
         dt = value
     else:
         try:
-            # תמיכה בפורמט של מסד הנתונים
             dt = datetime.strptime(str(value), "%Y-%m-%d %H:%M:%S")
         except ValueError:
             return str(value)
     return dt.strftime("%d %b %Y, %H:%M")
 
-
+#Formats a price value as a dollar amount for display
 def _format_price(value):
-    """הופך מחיר למחרוזת עם סימן דולר (כמו ב-HTML שלך)"""
     if value is None or value == "":
         return "—"
     try:
         n = float(value)
-        # שינוי מ-₪ ל-$ כדי להתאים ל-home_page.html
         return f"${n:,.2f}" if not n.is_integer() else f"${int(n):,}"
     except (ValueError, TypeError):
         return f"${value}"
 
-
+#Prepares flight data for display by formatting dates and prices
 def prepare_flights_for_view(flights):
-    """פונקציה מרכזית שמעבירה את כל הנתונים דרך פילטר העיצוב"""
     prepared = []
     for f in flights or []:
         f = dict(f)
@@ -43,38 +37,7 @@ def prepare_flights_for_view(flights):
         prepared.append(f)
     return prepared
 
-
-# --- לוגיקת המושבים (Seatmap) נשארת כפי שהיא לשימוש עתידי ---
-def _block_sizes(total_cols: int, max_block: int) -> list[int]:
-    if not total_cols or total_cols <= 0: return []
-    k = math.ceil(total_cols / max_block)
-    base = total_cols // k
-    rem = total_cols % k
-    sizes = [base] * k
-    return sizes  # לוגיקה מקוצרת לצורך דוגמה, המקור שלך מעולה
-
-
-def build_seatmap_layout(class_type: str, num_rows: int, num_cols: int, aisle_px: int = 64) -> dict:
-    max_block = 2 if class_type.lower() == "business" else 3
-    blocks = _block_sizes(int(num_cols), max_block)
-    positions = []
-    for bi, b in enumerate(blocks):
-        positions += ["seat"] * b
-        if bi != len(blocks) - 1: positions.append("aisle")
-
-    cols_parts = []
-    for bi, b in enumerate(blocks):
-        cols_parts.append(f"repeat({b}, minmax(34px, 1fr))")
-        if bi != len(blocks) - 1: cols_parts.append(f"{aisle_px}px")
-
-    return {
-        "class_type": class_type,
-        "num_rows": int(num_rows),
-        "num_cols": int(num_cols),
-        "grid_cols": " ".join(cols_parts),
-        "letters": list(string.ascii_uppercase[:int(num_cols)])
-    }
-
+#Creates and returns a plane object with the correct dimensions based on the flight data
 def get_plane_object(flight_id):
     """Factory: יוצר אובייקט מטוס עם המימדים הנכונים"""
     from models import SmallPlane, BigPlane
@@ -86,6 +49,7 @@ def get_plane_object(flight_id):
     if not class_dims:
         return None
 
+    #Finds and returns the class dimension data for a given class name, ignoring case and extra spaces.
     def find_dim(c_name):
         for c in class_dims:
             # מתמודד עם רווחים או אותיות גדולות/קטנות
@@ -109,9 +73,8 @@ def get_plane_object(flight_id):
                         plane_details['purchase_date'], eco['num_rows'], eco['num_cols'],
                         bus['num_rows'], bus['num_cols'])
 
-
+#Converts a list of occupied seats into a dictionary for fast lookup
 def map_occupied_seats(occupied_list):
-    """ממיר רשימה למילון לחיפוש מהיר: {'Business': set((1,'A'), ...)}"""
     occupied_map = {'Business': set(), 'Economy': set()}
     for item in occupied_list or []:
         c_type = (item.get('class_type') or "").strip()
@@ -121,12 +84,10 @@ def map_occupied_seats(occupied_list):
         occupied_map[key].add((row, letter))
     return occupied_map
 
-
+#Validates the selected seats against the current occupied seats for the flight and returns any conflicts
 def validate_seat_selection(selected_seats, flight_id):
-    """בדיקה סופית לפני שמירה"""
     current_occupied = db.get_occupied_seats(flight_id)
     occupied_map = map_occupied_seats(current_occupied)
-
     conflicts = []
     for seat_str in selected_seats:
         try:
@@ -141,9 +102,8 @@ def validate_seat_selection(selected_seats, flight_id):
             continue
     return conflicts
 
-
+#Calculates the next booking ID based on the last ID stored in the database
 def calculate_next_booking_id(last_id_from_db):
-    """זו הפונקציה שדאטה בייס מייבא, והיא לא תלויה בכלום"""
     if last_id_from_db is None:
         return 1001
     return last_id_from_db + 1
